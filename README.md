@@ -16,7 +16,7 @@ The page is static and hosted on GitHub Pages. Live scores are stored in a free 
 5. Copy the values from the `firebaseConfig` it shows you.
 
 ### 2. Add the settings to `config.js`
-Paste the `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId` and `appId` into [`config.js`](config.js). Optionally set `setupPin` (e.g. `"1824"`) so only organisers can change the setup.
+Paste the `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId` and `appId` into [`config.js`](config.js). The Setup PIN is stored as `setupPinHash`, a SHA-256 hash of `blacklock-xi:<PIN>`, so the PIN itself isn't in the code. `config.js` has the command for generating a new one.
 
 The Firebase web config is not a secret; it is designed to sit in public web pages.
 
