@@ -1,0 +1,9 @@
+rules_version = '2';
+// Anyone with the link can read and score. Only the three collections the scoreboard uses are open.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{coll}/{id} {
+      allow read, write: if coll in ['event', 'players', 'matches'];
+    }
+  }
+}
