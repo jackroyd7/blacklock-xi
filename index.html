@@ -315,6 +315,13 @@ function fmtIndex(n){ if (n == null || n === "") return "–"; return n < 0 ? "+
 function fmtHcp(n){ return n < 0 ? "+" + Math.abs(n) : String(n); }
 function teamName(t){ return ev.teams[t].name; }
 function pname(id){ return players[id] ? players[id].name : "?"; }
+// Surname only for the scoreboard and match screens; adds an initial if two players share a surname.
+function sname(id){
+  const p = players[id]; if (!p) return "?";
+  const parts = p.name.trim().split(/\s+/), last = parts[parts.length - 1];
+  const clash = Object.entries(players).some(([oid, o]) => oid !== id && o.name.trim().split(/\s+/).pop().toLowerCase() === last.toLowerCase());
+  return clash && parts.length > 1 ? `${parts[0][0]}. ${last}` : last;
+}
 function sortedPlayers(team){ return Object.entries(players).filter(([, p]) => !team || p.team === team).sort((a, b) => (team ? 0 : a[1].team.localeCompare(b[1].team)) || (!!b[1].captain - !!a[1].captain) || a[1].name.localeCompare(b[1].name)); }
 function teeShort(t){ return t.name.split(" (")[0]; }
 function captBadge(p){ return p.captain ? `<span class="capt" style="background:var(--t${p.team.toLowerCase()})" title="Captain">C</span>` : ""; }
@@ -383,7 +390,7 @@ function getMatch(mid){
 }
 function entryKeys(m){ return m.format === "fourball" ? ["a0","a1","b0","b1"] : ["a","b"]; }
 function shotsForKey(m, k){ return k.length === 2 ? m.shots[k[0]][+k[1]] : m.shots[k][0]; }
-function keyLabel(m, k){ return k.length === 2 ? pname(m[k[0]][+k[1]]) : m[k].map(pname).join(" / "); }
+function keyLabel(m, k){ return k.length === 2 ? sname(m[k[0]][+k[1]]) : m[k].map(sname).join(" / "); }
 function holeResult(m, h){
   const s = m.scores[h] || {}, si = m.c.si[h-1];
   if (s.w === "A" || s.w === "B" || s.w === "H") return { w: s.w, quick: true };
@@ -521,7 +528,7 @@ function pairCell(m, side, st){
   const lead = st.leader === (side === "a" ? "A" : "B") && (st.status === "live" || st.status === "final");
   if (!m.ready) return `<div class="pair ${side}"><span class="tbc">Pairing TBC</span></div>`;
   const shots = m.format === "fourball" ? ids.map((id, i) => m.shots[side][i]) : null;
-  const names = ids.map((id, i) => `<span>${esc(pname(id))}${shots && shots[i] ? ` <small>(${shots[i]})</small>` : ""}</span>`).join("");
+  const names = ids.map((id, i) => `<span>${esc(sname(id))}${shots && shots[i] ? ` <small>(${shots[i]})</small>` : ""}</span>`).join("");
   const teamShots = m.format !== "fourball" && m.shots[side][0] ? `<small>Receives ${m.shots[side][0]}</small>` : "";
   return `<div class="pair ${side}${lead ? " lead" : ""}">${names}${teamShots}</div>`;
 }
@@ -566,7 +573,7 @@ function renderMatch(){
     `${m.format === "chapman" ? ev.allow.chapLow : ev.allow.greenLow}% low + ${m.format === "chapman" ? ev.allow.chapHigh : ev.allow.greenHigh}% high, shots off the lower pair`;
   const pcard = side => {
     const T = side === "a" ? "A" : "B";
-    let rows = m[side].map((id, i) => `<div class="ln"><span>${esc(pname(id))}</span><span class="num">CH ${fmtHcp(m.ch[side][i])}${hcpOverride(id, m.round) != null ? "*" : ""}${m.format === "fourball" ? ` · PH ${fmtHcp(m.ph[side][i])} · <b>${m.shots[side][i]} shots</b>` : ""}</span></div>`).join("");
+    let rows = m[side].map((id, i) => `<div class="ln"><span>${esc(sname(id))}</span><span class="num">CH ${fmtHcp(m.ch[side][i])}${hcpOverride(id, m.round) != null ? "*" : ""}${m.format === "fourball" ? ` · PH ${fmtHcp(m.ph[side][i])} · <b>${m.shots[side][i]} shots</b>` : ""}</span></div>`).join("");
     if (m.format !== "fourball") rows += `<div class="ln"><span>Pair handicap ${fmtHcp(m.ph[side][0])}</span><b class="num">${m.shots[side][0]} shots</b></div>`;
     return `<div class="card"><span class="t" style="color:var(--t${side})">${esc(teamName(T))}</span>${rows}</div>`;
   };
