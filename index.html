@@ -617,7 +617,7 @@ function renderSetup(){
       <button class="btn danger" data-act="delplayer" data-id="${id}" aria-label="Remove ${esc(p.name)}">✕</button></div>`).join("");
   const counts = { A: sortedPlayers("A").length, B: sortedPlayers("B").length };
 
-  $app.innerHTML = `<h2 class="sec">Setup</h2>
+  $app.innerHTML = `<div class="row" style="justify-content:space-between"><h2 class="sec">Setup</h2>${CFG.setupPin ? `<button class="btn" data-act="lock">Lock setup</button>` : ""}</div>
     ${noDb ? `<div class="notice"><b>Not connected.</b> Add the Firebase settings to <code>config.js</code> before saving anything.</div>` : `<p class="lead">Changes save to everyone's scoreboard. Save each section separately.</p>`}
     <section class="form"><h3>Event &amp; teams</h3><div class="fgrid">
       <label class="f">Event name<input type="text" id="e-name" value="${esc(ev.name)}" ${disabled}></label>
@@ -780,6 +780,7 @@ document.addEventListener("click", e => {
     }
     case "clearhole": { for (const k of entryKeys(m)) queueScore(ui.match, String(ui.hole), k, null); break; }
     case "unlock": if (val("pin") === String(CFG.setupPin)) { ui.unlocked = true; saveUi(); render(true); } else toast("That PIN isn't right."); break;
+    case "lock": ui.unlocked = false; saveUi(); render(true); toast("Setup locked on this phone"); break;
     case "saveevent": saveEvent(); break;
     case "savecourse": saveCourse(); break;
     case "bulkadd": bulkAdd(); break;
