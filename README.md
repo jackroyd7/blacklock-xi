@@ -34,13 +34,14 @@ Repository **Settings → Pages → Build and deployment → Deploy from a branc
 ## Formats and handicaps
 | Round | Format | Course | Points per match |
 |---|---|---|---|
-| R1 Day 1 AM | Fourball | Tour | 1 |
+| R1 Day 1 AM | Foursomes | Tour | 1 |
 | R2 Day 1 PM | Chapman | Stadium | 1 |
 | R3 Day 2 AM | Greensomes | Tour | 1 |
 | R4 Day 2 PM | Fourball | Stadium | 2 |
 
 - Course handicap = Index × Slope ÷ 113 + (Rating − Par)
 - Fourball: 90% of course handicap, shots off the lowest player in the match
+- Foursomes: 50% of the pair's combined course handicaps, difference between pairs as shots
 - Chapman and Greensomes: 60% of the lower + 40% of the higher course handicap, difference between pairs as shots
 - Handicaps are locked into a match when its first score is entered
 

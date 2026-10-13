@@ -221,6 +221,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
+  foursomes:  { label: "Foursomes",  note: "Partners play one ball, taking alternate shots. One tees off on the odd holes, the other on the even holes." },
   chapman:    { label: "Chapman",    note: "Both drive, swap balls for the second shot, then pick one ball and play alternate shots in." },
   greensomes: { label: "Greensomes", note: "Both drive, pick the better drive, then play alternate shots in." }
 };
@@ -255,9 +256,9 @@ const DEFAULT_EVENT = {
       par: [4,4,5,4,3,4,5,3,4, 4,3,5,4,4,5,3,4,4],
       si:  [3,5,13,9,7,11,17,15,1, 12,16,14,6,4,18,10,8,2] }
   },
-  allow: { fourball: 90, chapLow: 60, chapHigh: 40, greenLow: 60, greenHigh: 40 },
+  allow: { fourball: 90, foursomes: 50, chapLow: 60, chapHigh: 40, greenLow: 60, greenHigh: 40 },
   rounds: [
-    { day: "Day 1", session: "Morning",   format: "fourball",   points: 1, course: "tour",    tee: "54" },
+    { day: "Day 1", session: "Morning",   format: "foursomes",  points: 1, course: "tour",    tee: "54" },
     { day: "Day 1", session: "Afternoon", format: "chapman",    points: 1, course: "stadium", tee: "60" },
     { day: "Day 2", session: "Morning",   format: "greensomes", points: 1, course: "tour",    tee: "54" },
     { day: "Day 2", session: "Afternoon", format: "fourball",   points: 2, course: "stadium", tee: "60" }
@@ -339,6 +340,10 @@ function shotsFor(format, chA, chB){
     const pa = chA.map(x => Math.round(x * ev.allow.fourball / 100)), pb = chB.map(x => Math.round(x * ev.allow.fourball / 100));
     const mn = Math.min(...pa, ...pb);
     return { ph: { a: pa, b: pb }, shots: { a: pa.map(x => x - mn), b: pb.map(x => x - mn) } };
+  }
+  if (format === "foursomes") {
+    const pct = ev.allow.foursomes, ta = Math.round((chA[0] + chA[1]) * pct / 100), tb = Math.round((chB[0] + chB[1]) * pct / 100), mn = Math.min(ta, tb);
+    return { ph: { a: [ta], b: [tb] }, shots: { a: [ta - mn], b: [tb - mn] } };
   }
   const lo = format === "chapman" ? ev.allow.chapLow : ev.allow.greenLow, hi = format === "chapman" ? ev.allow.chapHigh : ev.allow.greenHigh;
   const team = arr => { const [l, h] = [...arr].sort((x, y) => x - y); return Math.round(l * lo / 100 + h * hi / 100); };
@@ -498,6 +503,7 @@ function renderHeader(){
 function handicapRule(format){
   const a = ev.allow;
   if (format === "fourball") return `Handicaps: each player gets ${a.fourball}% of their course handicap; everyone plays off the lowest in the match, who gets no shots.`;
+  if (format === "foursomes") return `Handicaps: each pair gets ${a.foursomes}% of their combined course handicaps; the pair with more gets the difference in shots.`;
   const lo = format === "chapman" ? a.chapLow : a.greenLow, hi = format === "chapman" ? a.chapHigh : a.greenHigh;
   return `Handicaps: each pair gets ${lo}% of the lower plus ${hi}% of the higher course handicap; the pair with more gets the difference in shots.`;
 }
@@ -547,6 +553,7 @@ function renderMatch(){
   if (!m.ready) { $app.innerHTML = html + `<div class="empty">This match has no pairing yet. Set it in <b>Setup → Pairings</b>.</div>`; return; }
 
   const allowTxt = m.format === "fourball" ? `${ev.allow.fourball}% of course handicap, shots off the lowest` :
+    m.format === "foursomes" ? `${ev.allow.foursomes}% of the pair's combined course handicaps, shots off the lower pair` :
     `${m.format === "chapman" ? ev.allow.chapLow : ev.allow.greenLow}% low + ${m.format === "chapman" ? ev.allow.chapHigh : ev.allow.greenHigh}% high, shots off the lower pair`;
   const pcard = side => {
     const T = side === "a" ? "A" : "B";
@@ -691,7 +698,7 @@ function renderShots(){
   } else out = `<div class="empty">Pick two players for each side to see playing handicaps, shots received and the holes they fall on.</div>`;
   const all = sortedPlayers().map(([id, p]) => `<tr><td style="border-left:4px solid var(--t${p.team.toLowerCase()})">${esc(p.name)}</td><td>${fmtIndex(p.index)}</td>${[1,2,3,4].map(n => `<td>${fmtHcp(roundHcp(id, n))}${hcpOverride(id, n) != null ? "*" : ""}</td>`).join("")}</tr>`).join("");
   $app.innerHTML = `<h2 class="sec">Shots calculator</h2>
-    <p class="lead">Try any pairing in any format. Course handicaps come from the round you pick (its course and tees, or a handicap entered by hand in Setup). Allowances are ${ev.allow.fourball}% for fourball and ${ev.allow.chapLow}/${ev.allow.chapHigh} (Chapman) and ${ev.allow.greenLow}/${ev.allow.greenHigh} (Greensomes) low/high for the pairs formats.</p>
+    <p class="lead">Try any pairing in any format. Course handicaps come from the round you pick (its course and tees, or a handicap entered by hand in Setup). Allowances: fourball ${ev.allow.fourball}% per player; foursomes ${ev.allow.foursomes}% of the pair's combined handicaps; Chapman ${ev.allow.chapLow}/${ev.allow.chapHigh} and Greensomes ${ev.allow.greenLow}/${ev.allow.greenHigh} (low/high).</p>
     <div class="form"><div class="fgrid">
       <label class="f">Format<select id="c-format">${Object.entries(FORMATS).map(([k, f]) => `<option value="${k}" ${k === c.format ? "selected" : ""}>${f.label}</option>`).join("")}</select></label>
       <label class="f">Round (course &amp; tees)<select id="c-round">${[1,2,3,4].map(n => `<option value="${n}" ${n === c.round ? "selected" : ""}>${esc(roundLabel(n))} · ${esc(teeOf(ev.rounds[n-1]).name.split(" (")[0])}</option>`).join("")}</select></label>
@@ -830,12 +837,13 @@ function renderSetup(){
       ${COURSE_KEYS.map(courseForm).join("<hr style='border:0;border-top:1px solid var(--line);width:100%'>")}
       <h3>Handicap allowances</h3><div class="fgrid">
         <label class="f">Fourball %<input type="number" id="a-fb" value="${ev.allow.fourball}" ${disabled}></label>
+        <label class="f">Foursomes % of combined<input type="number" id="a-fs" value="${ev.allow.foursomes}" ${disabled}></label>
         <label class="f">Chapman low %<input type="number" id="a-cl" value="${ev.allow.chapLow}" ${disabled}></label>
         <label class="f">Chapman high %<input type="number" id="a-ch" value="${ev.allow.chapHigh}" ${disabled}></label>
         <label class="f">Greensomes low %<input type="number" id="a-gl" value="${ev.allow.greenLow}" ${disabled}></label>
         <label class="f">Greensomes high %<input type="number" id="a-gh" value="${ev.allow.greenHigh}" ${disabled}></label>
       </div>
-      <p class="hint">Defaults follow the World Handicap System match-play recommendations: fourball 90%, Chapman and Greensomes 60% of the lower + 40% of the higher course handicap. The difference between the sides is given as shots.</p>
+      <p class="hint">Defaults follow the World Handicap System match-play recommendations: fourball 90%; foursomes 50% of the pair's combined course handicaps; Chapman and Greensomes 60% of the lower + 40% of the higher course handicap. The difference between the sides is given as shots.</p>
       <div><button class="btn pri" data-act="savecourse">Save courses</button></div></section>
 
     <section class="form"><h3>Export &amp; backup</h3>
@@ -883,7 +891,7 @@ async function saveCourse(){
     if (tees.some(t => !isFinite(t.rating) || !(t.slope >= 55 && t.slope <= 155))) { toast(`${ev.courses[k].name}: every tee needs a course rating and a slope between 55 and 155.`); return; }
     e.courses[k] = { name: val(`${k}-name`).trim() || ev.courses[k].name, tees, par, si };
   }
-  e.allow = { fourball: +val("a-fb") || 90, chapLow: +val("a-cl") || 60, chapHigh: +val("a-ch") || 40, greenLow: +val("a-gl") || 60, greenHigh: +val("a-gh") || 40 };
+  e.allow = { fourball: +val("a-fb") || 90, foursomes: +val("a-fs") || 50, chapLow: +val("a-cl") || 60, chapHigh: +val("a-ch") || 40, greenLow: +val("a-gl") || 60, greenHigh: +val("a-gh") || 40 };
   await writeEvent(e, "Courses saved");
 }
 async function saveBios(){
@@ -927,6 +935,7 @@ function fileBase(){ return `${ev.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
 function readyMatches(){ const out = []; for (let r = 1; r <= 4; r++) for (const mid of matchIds(r)) { const m = getMatch(mid); if (m.ready) out.push(m); } return out; }
 function basisText(m){
   if (m.format === "fourball") return `${ev.allow.fourball}% per player, off the lowest`;
+  if (m.format === "foursomes") return `${ev.allow.foursomes}% of combined per pair`;
   const lo = m.format === "chapman" ? ev.allow.chapLow : ev.allow.greenLow, hi = m.format === "chapman" ? ev.allow.chapHigh : ev.allow.greenHigh;
   return `${lo}% low + ${hi}% high per pair`;
 }
