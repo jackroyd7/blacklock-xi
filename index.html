@@ -228,6 +228,7 @@ const FORMATS = {
 // Check against the card on the day and edit in Setup if needed.
 const DEFAULT_EVENT = {
   name: "Blacklock XI",
+  year: new Date().getFullYear(),
   venue: "Camiral",
   teams: { A: { name: "Crows", color: "#1d4f91" }, B: { name: "Smugglers", color: "#b42335" } },
   courses: {
@@ -287,6 +288,7 @@ function mergeEvent(d){
   const e = clone(DEFAULT_EVENT); if (!d) return e;
   if (d.name) e.name = d.name;
   if (d.venue != null) e.venue = d.venue;
+  if (d.year) e.year = d.year;
   for (const t of ["A","B"]) Object.assign(e.teams[t], (d.teams || {})[t] || {});
   for (const k of COURSE_KEYS) {
     const dc = (d.courses || {})[k] || {}, base = e.courses[k];
@@ -786,6 +788,7 @@ function renderSetup(){
     <section class="form"><h3>Event &amp; teams</h3><div class="fgrid">
       <label class="f">Event name<input type="text" id="e-name" value="${esc(ev.name)}" ${disabled}></label>
       <label class="f">Venue<input type="text" id="e-venue" value="${esc(ev.venue)}" ${disabled}></label>
+      <label class="f">Year<input type="number" id="e-year" value="${esc(ev.year)}" ${disabled}></label>
       <label class="f">Team 1 name<input type="text" id="e-ta" value="${esc(ev.teams.A.name)}" ${disabled}></label>
       <label class="f">Team 1 colour<input type="color" id="e-ca" value="${esc(ev.teams.A.color)}" ${disabled}></label>
       <label class="f">Team 2 name<input type="text" id="e-tb" value="${esc(ev.teams.B.name)}" ${disabled}></label>
@@ -833,7 +836,22 @@ function renderSetup(){
         <label class="f">Greensomes high %<input type="number" id="a-gh" value="${ev.allow.greenHigh}" ${disabled}></label>
       </div>
       <p class="hint">Defaults follow the World Handicap System match-play recommendations: fourball 90%, Chapman and Greensomes 60% of the lower + 40% of the higher course handicap. The difference between the sides is given as shots.</p>
-      <div><button class="btn pri" data-act="savecourse">Save courses</button></div></section>`;
+      <div><button class="btn pri" data-act="savecourse">Save courses</button></div></section>
+
+    <section class="form"><h3>Export &amp; backup</h3>
+      <p class="hint">Download the results as spreadsheets (open in Excel, Numbers or Google Sheets). Every row is stamped with the event and year, so files from different years can be combined.</p>
+      <div class="row">
+        <button class="btn" data-act="exportmatches">Matches (CSV)</button>
+        <button class="btn" data-act="exportholes">Hole by hole (CSV)</button>
+        <button class="btn" data-act="exportplayers">Players (CSV)</button>
+      </div>
+      <p class="hint">A full backup is one file with everything: event, courses, players, handicaps, pairings and every score. Worth downloading at the end of each day.</p>
+      <div><button class="btn pri" data-act="exportbackup">Download full backup</button></div>
+      <h3>Restore from backup</h3>
+      <p class="hint">Replaces everything currently in the scoreboard with the contents of a backup file. Everyone's scoreboard updates straight away.</p>
+      <input type="file" id="restore-file" accept=".json,application/json" ${disabled}>
+      <p class="hint" id="restore-info"></p>
+      <div><button class="btn danger" data-act="restore" id="restore-btn" disabled>Restore backup</button></div></section>`;
 }
 function pairPreview(mid, a, b){
   const r0 = ev.rounds[roundOf(mid) - 1];
@@ -849,6 +867,7 @@ async function saveEvent(){
   const e = clone(ev);
   e.name = val("e-name").trim() || "Blacklock XI";
   e.venue = val("e-venue").trim();
+  e.year = parseInt(val("e-year")) || ev.year;
   e.teams.A = { name: val("e-ta").trim() || "Team 1", color: val("e-ca") }; e.teams.B = { name: val("e-tb").trim() || "Team 2", color: val("e-cb") };
   e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), tee: val(`r-tee-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1 }));
   await writeEvent(e, "Event saved");
@@ -889,6 +908,113 @@ async function saveHcps(){
   if (bad) { toast(`Couldn't read the handicap for ${bad}.`); return; }
   if (!n) { toast("No changes to save"); return; }
   try { await batch.commit(); toast(`Saved course handicaps for ${n} player${n > 1 ? "s" : ""}`); render(true); } catch (e) { onWriteError(e); }
+}
+// ---------- export & backup ----------
+function csvCell(v){
+  if (v == null) return "";
+  let t = String(v);
+  if (/^[=@]/.test(t)) t = "'" + t; // stop spreadsheets treating text as a formula
+  return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+function toCsv(rows){ return "\ufeff" + rows.map(r => r.map(csvCell).join(",")).join("\r\n"); }
+function download(name, text, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function fileBase(){ return `${ev.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "blacklock"}-${ev.year}`; }
+function readyMatches(){ const out = []; for (let r = 1; r <= 4; r++) for (const mid of matchIds(r)) { const m = getMatch(mid); if (m.ready) out.push(m); } return out; }
+function basisText(m){
+  if (m.format === "fourball") return `${ev.allow.fourball}% per player, off the lowest`;
+  const lo = m.format === "chapman" ? ev.allow.chapLow : ev.allow.greenLow, hi = m.format === "chapman" ? ev.allow.chapHigh : ev.allow.greenHigh;
+  return `${lo}% low + ${hi}% high per pair`;
+}
+function strokeText(v){ return v == null || v === "" ? "" : v === "x" ? "P/U" : v; }
+function exportMatches(){
+  const A = teamName("A"), B = teamName("B");
+  const head = ["Event", "Year", "Round", "Day", "Session", "Format", "Course", "Tees", "Match", "Points at stake",
+    `${A} player 1`, `${A} player 2`, `${B} player 1`, `${B} player 2`,
+    `${A} course hcp 1`, `${A} course hcp 2`, `${B} course hcp 1`, `${B} course hcp 2`,
+    "Handicap basis", `${A} shots 1`, `${A} shots 2`, `${B} shots 1`, `${B} shots 2`,
+    "Status", "Result", "Winner", `${A} points`, `${B} points`, "Holes played"];
+  const rows = readyMatches().map(m => {
+    const st = matchState(m), pts = matchPoints(m, st, false), fin = st.status === "final";
+    const sh = side => m.format === "fourball" ? m.shots[side] : [m.shots[side][0], ""];
+    return [ev.name, ev.year, m.round, m.r.day, m.r.session, FORMATS[m.format].label, m.c.name, teeShort(m.tee), m.slot, m.r.points,
+      ...m.a.map(pname), ...m.b.map(pname), ...m.ch.a, ...m.ch.b,
+      basisText(m), ...sh("a"), ...sh("b"),
+      fin ? "Final" : st.status === "live" ? "In progress" : "Not started",
+      st.status === "notstarted" ? "" : fin ? st.text : `${st.text} thru ${st.played}`,
+      fin ? (st.leader ? teamName(st.leader) : "Halved") : "",
+      fin ? pts.A : "", fin ? pts.B : "", st.played];
+  });
+  download(`${fileBase()}-matches.csv`, toCsv([head, ...rows]), "text/csv;charset=utf-8");
+  toast(`Downloaded ${rows.length} match${rows.length === 1 ? "" : "es"}`);
+}
+function exportHoles(){
+  const A = teamName("A"), B = teamName("B");
+  const head = ["Event", "Year", "Round", "Format", "Course", "Tees", "Match", `${A} players`, `${B} players`, "Hole", "Par", "SI",
+    `${A} strokes 1`, `${A} strokes 2`, `${B} strokes 1`, `${B} strokes 2`,
+    `${A} shots on hole 1`, `${A} shots on hole 2`, `${B} shots on hole 1`, `${B} shots on hole 2`,
+    "Entered as", "Hole won by", "Match after hole"];
+  const rows = [];
+  for (const m of readyMatches()) {
+    const st = matchState(m), four = m.format === "fourball";
+    for (let h = 1; h <= 18; h++) {
+      const s = m.scores[h] || {}, r = st.res[h];
+      if (!r && !Object.values(s).some(v => v != null && v !== "")) continue;
+      const si = m.c.si[h-1], keys = four ? ["a0", "a1", "b0", "b1"] : ["a", null, "b", null];
+      const after = st.after[h];
+      rows.push([ev.name, ev.year, m.round, FORMATS[m.format].label, m.c.name, teeShort(m.tee), m.slot, m.a.map(pname).join(" & "), m.b.map(pname).join(" & "), h, m.c.par[h-1], si,
+        ...keys.map(k => k ? strokeText(s[k]) : ""),
+        ...keys.map(k => k ? strokesOn(shotsForKey(m, k), si) : ""),
+        r ? (r.quick ? "Result" : "Strokes") : "",
+        r ? (r.w === "H" ? "Halved" : teamName(r.w)) : "",
+        after == null ? "" : after === 0 ? "All square" : `${teamName(after > 0 ? "A" : "B")} ${Math.abs(after)} up`]);
+    }
+  }
+  download(`${fileBase()}-holes.csv`, toCsv([head, ...rows]), "text/csv;charset=utf-8");
+  toast(`Downloaded ${rows.length} hole${rows.length === 1 ? "" : "s"}`);
+}
+function exportPlayers(){
+  const head = ["Event", "Year", "Name", "Team", "Captain", "Caps", "Handicap index",
+    ...[1, 2, 3, 4].map(n => `${roundLabel(n)} course hcp`), "Matches", "Finished", "Won", "Halved", "Lost", "Points won"];
+  const rows = sortedPlayers().map(([id, p]) => { const r = playerRecord(id);
+    return [ev.name, ev.year, p.name, teamName(p.team), p.captain ? "Yes" : "", p.caps || "", p.index,
+      ...[1, 2, 3, 4].map(n => roundHcp(id, n)), r.list.length, r.P, r.W, r.H, r.L, r.pts]; });
+  download(`${fileBase()}-players.csv`, toCsv([head, ...rows]), "text/csv;charset=utf-8");
+  toast(`Downloaded ${rows.length} players`);
+}
+function exportBackup(){
+  const data = { app: "blacklock-xi", version: 1, exportedAt: new Date().toISOString(), event: ev, players, matches };
+  download(`${fileBase()}-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), "application/json");
+  toast("Backup downloaded");
+}
+let restoreData = null, restoreArmed = false;
+function readRestoreFile(file){
+  const info = document.getElementById("restore-info"), btn = document.getElementById("restore-btn");
+  restoreData = null; btn.disabled = true;
+  if (!file) { info.textContent = ""; return; }
+  file.text().then(txt => {
+    const d = JSON.parse(txt);
+    if (d.app !== "blacklock-xi" || !d.event || typeof d.players !== "object" || typeof d.matches !== "object") throw new Error("not a backup");
+    restoreData = d; btn.disabled = false;
+    const scored = Object.values(d.matches).filter(m => m && m.scores && Object.keys(m.scores).length).length;
+    info.textContent = `Backup from ${new Date(d.exportedAt).toLocaleString()}: ${Object.keys(d.players).length} players, ${Object.keys(d.matches).length} matches (${scored} with scores).`;
+  }).catch(() => { info.textContent = "That file isn't a Blacklock XI backup."; });
+}
+async function doRestore(btn){
+  if (blocked() || !restoreData) return;
+  if (!restoreArmed) { restoreArmed = true; btn.textContent = "Tap again to replace all data"; setTimeout(() => { if (restoreArmed) { restoreArmed = false; btn.textContent = "Restore backup"; } }, 4000); return; }
+  restoreArmed = false; btn.textContent = "Restoring…";
+  const b = fs.batch(), d = restoreData;
+  b.set(fs.doc("event/main"), d.event);
+  for (const [id, p] of Object.entries(d.players)) b.set(fs.doc("players/" + id), p);
+  for (const id of Object.keys(players)) if (!(id in d.players)) b.delete(fs.doc("players/" + id));
+  for (const [id, m] of Object.entries(d.matches)) b.set(fs.doc("matches/" + id), m);
+  for (const id of Object.keys(matches)) if (!(id in d.matches)) b.delete(fs.doc("matches/" + id));
+  try { await b.commit(); restoreData = null; toast("Backup restored"); render(true); } catch (e) { btn.textContent = "Restore backup"; onWriteError(e); }
 }
 async function writeEvent(e, msg){
   try { await fs.doc("event/main").set(e); ev = mergeEvent(e); applyTeamColors(); toast(msg); render(true); } catch (err) { onWriteError(err); }
@@ -999,6 +1125,11 @@ document.addEventListener("click", e => {
     case "saveplayers": savePlayers(); break;
     case "delplayer": delPlayer(el.dataset.id, el); break;
     case "savepairs": savePairs(); break;
+    case "exportmatches": exportMatches(); break;
+    case "exportholes": exportHoles(); break;
+    case "exportplayers": exportPlayers(); break;
+    case "exportbackup": exportBackup(); break;
+    case "restore": doRestore(el); break;
   }
 });
 let setupDirty = false;
@@ -1006,6 +1137,7 @@ document.addEventListener("input", e => { if (e.target.id === "cc-index") { ui.c
 document.addEventListener("input", e => { if (ui.tab === "setup" && e.target.closest("main")) setupDirty = true; });
 document.addEventListener("change", e => {
   const t = e.target;
+  if (t.id === "restore-file") { readRestoreFile(t.files[0]); return; }
   if (ui.tab === "setup" && t.closest("main")) setupDirty = true;
   if (t.id && t.id.startsWith("c-") && ui.tab === "shots") {
     const c = ui.calc;

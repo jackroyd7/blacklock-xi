@@ -48,3 +48,12 @@ All of this is editable in Setup.
 
 ## Security note
 Anyone who has the link can enter or change scores, which is the point. Don't post the link publicly. The Firestore rules only allow access to the scoreboard's own data.
+
+## Exporting results
+**Setup → Export & backup** (behind the PIN):
+- **Matches (CSV):** one row per match: round, format, course and tees, players, course handicaps, shots, result, points.
+- **Hole by hole (CSV):** one row per hole per match: strokes, shots received, whether it was scored by strokes or result, who won it, and the match position.
+- **Players (CSV):** one row per player: index, course handicap per round, record and points.
+- **Full backup (JSON):** everything in one file. **Restore from backup** puts it all back, replacing what's there.
+
+Every row carries the event name and year (set in Event & teams), so files from different years can be stacked in one spreadsheet.
