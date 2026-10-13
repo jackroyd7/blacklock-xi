@@ -800,18 +800,13 @@ function renderSetup(){
       <label class="f">Points per match<input type="number" step="0.5" min="0.5" id="r-pts-${i}" value="${r.points}" ${disabled}></label></div>`).join("")}
     <div><button class="btn pri" data-act="saveevent">Save event</button></div></section>
 
-    <section class="form"><h3>Courses</h3>
-      <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), the same formula as the club's slope tables. Ratings, slopes, par and stroke index are from Camiral's official scorecards and slope sheets.</p>
-      ${COURSE_KEYS.map(courseForm).join("<hr style='border:0;border-top:1px solid var(--line);width:100%'>")}
-      <h3>Handicap allowances</h3><div class="fgrid">
-        <label class="f">Fourball %<input type="number" id="a-fb" value="${ev.allow.fourball}" ${disabled}></label>
-        <label class="f">Chapman low %<input type="number" id="a-cl" value="${ev.allow.chapLow}" ${disabled}></label>
-        <label class="f">Chapman high %<input type="number" id="a-ch" value="${ev.allow.chapHigh}" ${disabled}></label>
-        <label class="f">Greensomes low %<input type="number" id="a-gl" value="${ev.allow.greenLow}" ${disabled}></label>
-        <label class="f">Greensomes high %<input type="number" id="a-gh" value="${ev.allow.greenHigh}" ${disabled}></label>
-      </div>
-      <p class="hint">Defaults follow the World Handicap System match-play recommendations: fourball 90%, Chapman and Greensomes 60% of the lower + 40% of the higher course handicap. The difference between the sides is given as shots.</p>
-      <div><button class="btn pri" data-act="savecourse">Save courses</button></div></section>
+    <section class="form"><h3>Pairings</h3><p class="hint">Pick two players per side for each match. Shots shown update as you pick.</p>
+      ${pairings}<div><button class="btn pri" data-act="savepairs">Save pairings</button></div></section>
+
+    <section class="form"><h3>Player handicaps</h3>
+      <p class="hint">Grey numbers are calculated from each player's index and the round's tees. To use a different figure (from the club's slope table or a player's app), type it in; use + for plus handicaps. Clear a box to go back to the calculated figure.</p>
+      ${hcpGrid ? `<div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th>${[1,2,3,4].map(n => `<th>${esc(roundLabel(n))}<br><small class="hint">Tee ${esc(teeOf(ev.rounds[n-1]).name.split(" (")[0])}</small></th>`).join("")}</tr></thead><tbody>${hcpGrid}</tbody></table></div>
+      <div><button class="btn pri" data-act="savehcps">Save course handicaps</button></div>` : `<p class="hint">Add players first.</p>`}</section>
 
     <section class="form"><h3>Players <span class="hint">${esc(teamName("A"))} ${counts.A}/8 · ${esc(teamName("B"))} ${counts.B}/8</span></h3>
       ${plist ? `<div class="prow hint"><span>Name</span><span>Team</span><span>Index</span><span>Captain</span><span></span></div>${plist}<div><button class="btn pri" data-act="saveplayers">Save player changes</button></div>` : `<p class="hint">No players yet.</p>`}
@@ -827,13 +822,18 @@ function renderSetup(){
         <label class="f">Blurb<textarea id="bio-${id}" rows="3" style="min-height:70px;font-family:var(--body)" ${disabled}>${esc(p.bio || "")}</textarea></label></div>`).join("") || `<p class="hint">Add players first.</p>`}
       ${Object.keys(players).length ? `<div><button class="btn pri" data-act="savebios">Save profiles</button></div>` : ""}</section>
 
-    <section class="form"><h3>Course handicaps</h3>
-      <p class="hint">Grey numbers are calculated from each player's index and the round's tees. To use a different figure (from the club's slope table or a player's app), type it in; use + for plus handicaps. Clear a box to go back to the calculated figure.</p>
-      ${hcpGrid ? `<div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th>${[1,2,3,4].map(n => `<th>${esc(roundLabel(n))}<br><small class="hint">Tee ${esc(teeOf(ev.rounds[n-1]).name.split(" (")[0])}</small></th>`).join("")}</tr></thead><tbody>${hcpGrid}</tbody></table></div>
-      <div><button class="btn pri" data-act="savehcps">Save course handicaps</button></div>` : `<p class="hint">Add players first.</p>`}</section>
-
-    <section class="form"><h3>Pairings</h3><p class="hint">Pick two players per side for each match. Shots shown update as you pick.</p>
-      ${pairings}<div><button class="btn pri" data-act="savepairs">Save pairings</button></div></section>`;
+    <section class="form"><h3>Courses</h3>
+      <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), the same formula as the club's slope tables. Ratings, slopes, par and stroke index are from Camiral's official scorecards and slope sheets.</p>
+      ${COURSE_KEYS.map(courseForm).join("<hr style='border:0;border-top:1px solid var(--line);width:100%'>")}
+      <h3>Handicap allowances</h3><div class="fgrid">
+        <label class="f">Fourball %<input type="number" id="a-fb" value="${ev.allow.fourball}" ${disabled}></label>
+        <label class="f">Chapman low %<input type="number" id="a-cl" value="${ev.allow.chapLow}" ${disabled}></label>
+        <label class="f">Chapman high %<input type="number" id="a-ch" value="${ev.allow.chapHigh}" ${disabled}></label>
+        <label class="f">Greensomes low %<input type="number" id="a-gl" value="${ev.allow.greenLow}" ${disabled}></label>
+        <label class="f">Greensomes high %<input type="number" id="a-gh" value="${ev.allow.greenHigh}" ${disabled}></label>
+      </div>
+      <p class="hint">Defaults follow the World Handicap System match-play recommendations: fourball 90%, Chapman and Greensomes 60% of the lower + 40% of the higher course handicap. The difference between the sides is given as shots.</p>
+      <div><button class="btn pri" data-act="savecourse">Save courses</button></div></section>`;
 }
 function pairPreview(mid, a, b){
   const r0 = ev.rounds[roundOf(mid) - 1];
