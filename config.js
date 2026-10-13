@@ -4,12 +4,12 @@
 //    Scores can still be entered by anyone with the link.
 window.BLACKLOCK_CONFIG = {
   firebase: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyBRtYrzfgaXU0I_zrQ_s_raSU4oVQv-rpc",
+    authDomain: "blacklock-xi.firebaseapp.com",
+    projectId: "blacklock-xi",
+    storageBucket: "blacklock-xi.firebasestorage.app",
+    messagingSenderId: "536079327445",
+    appId: "1:536079327445:web:04fa9c7632a38c77ef825c"
   },
   setupPin: ""
 };
