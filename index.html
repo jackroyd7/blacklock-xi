@@ -110,6 +110,15 @@ main.wrap{padding-block:16px 48px;display:grid;grid-template-columns:minmax(0,1f
 .step .val.x{font-size:1rem}
 .step .pu{width:auto;border-radius:22px;padding:0 10px;font-size:.78rem;font-weight:700}
 .step .pu[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.quick{display:grid;grid-template-columns:1fr auto 1fr;gap:6px}
+.quick button{border:2px solid var(--line);background:var(--surface2);border-radius:8px;padding:10px 6px;font-weight:700;font-size:.88rem;line-height:1.15}
+.quick button.qa{border-color:var(--ta);color:var(--ta)} .quick button.qb{border-color:var(--tb);color:var(--tb)}
+.quick button.qa[aria-pressed="true"]{background:var(--ta);color:var(--on-team)}
+.quick button.qb[aria-pressed="true"]{background:var(--tb);color:var(--on-team)}
+.quick button.qh[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.orline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
+.orline::before,.orline::after{content:"";flex:1;border-top:1px solid var(--line)}
+.erow.muted{opacity:.45}
 .efoot{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:10px;flex-wrap:wrap}
 .efoot .res{font-weight:600;font-size:.9rem;flex:1;min-width:140px}
 .btn{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 14px;font-weight:600}
@@ -361,6 +370,7 @@ function shotsForKey(m, k){ return k.length === 2 ? m.shots[k[0]][+k[1]] : m.sho
 function keyLabel(m, k){ return k.length === 2 ? pname(m[k[0]][+k[1]]) : m[k].map(pname).join(" / "); }
 function holeResult(m, h){
   const s = m.scores[h] || {}, si = m.c.si[h-1];
+  if (s.w === "A" || s.w === "B" || s.w === "H") return { w: s.w, quick: true };
   const side = t => {
     const keys = m.format === "fourball" ? [t+"0", t+"1"] : [t];
     let best = Infinity, bestK = null;
@@ -557,11 +567,16 @@ function renderMatch(){
   const si = m.c.si[h-1], par = m.c.par[h-1], s = m.scores[h] || {}, r = st.res[h];
   const ro = noDb;
   html += `<div class="card entry"><div class="ehead"><span class="h">Hole ${h}</span><span class="meta">Par ${par} · SI ${si}</span></div>`;
+  if (!ro) html += `<div class="quick" role="group" aria-label="Hole result">
+      <button class="qa" data-act="quick" data-w="A" aria-pressed="${s.w === "A"}">${esc(teamName("A"))}<br>win hole</button>
+      <button class="qh" data-act="quick" data-w="H" aria-pressed="${s.w === "H"}">Halved</button>
+      <button class="qb" data-act="quick" data-w="B" aria-pressed="${s.w === "B"}">${esc(teamName("B"))}<br>win hole</button></div>
+    <div class="orline">or enter strokes</div>`;
   for (const k of entryKeys(m)) {
     const T = k[0], n = strokesOn(shotsForKey(m, k), si), v = s[k];
     const vtxt = v == null || v === "" ? "–" : v === "x" ? "P/U" : v;
     const net = typeof v === "number" && n ? ` · net ${v - n}` : "";
-    html += `<div class="erow"><span class="stripe" style="background:var(--t${T})"></span>
+    html += `<div class="erow${r && r.quick ? " muted" : ""}"><span class="stripe" style="background:var(--t${T})"></span>
       <span class="who"><b>${esc(keyLabel(m, k))}</b><small>${n ? `<span class="dots">${"●".repeat(n)}</span> ${n} shot${n > 1 ? "s" : ""}` : "No shot"}${net}</small></span>
       <span class="step">${ro ? "" : `<button data-act="dec" data-k="${k}" aria-label="One less">−</button>`}<span class="val num${v === "x" ? " x" : ""}">${vtxt}</span>${ro ? "" : `<button data-act="inc" data-k="${k}" aria-label="One more">+</button><button class="pu" data-act="pu" data-k="${k}" aria-pressed="${v === "x"}">P/U</button>`}</span></div>`;
   }
@@ -569,7 +584,7 @@ function renderMatch(){
   if (r) {
     const after = st.after[h];
     const standing = after == null ? "" : after === 0 ? " · All square" : ` · ${esc(teamName(after > 0 ? "A" : "B"))} ${Math.abs(after)} UP`;
-    resTxt = (r.w === "H" ? "Hole halved" : `${esc(teamName(r.w))} win the hole`) + standing;
+    resTxt = (r.w === "H" ? "Hole halved" : `${esc(teamName(r.w))} win the hole`) + standing + (r.quick ? `<br><small class="hint">Result entered directly. Tap it again to go back to strokes.</small>` : "");
   }
   html += `<div class="efoot"><span class="res">${resTxt}</span><span class="row">
     <button class="btn" data-act="hole" data-h="${h-1}" ${h === 1 ? "disabled" : ""}>‹ Prev</button>
@@ -599,7 +614,7 @@ function scorecard(m, st){
   const res = `<tr><td class="lbl">Hole won</td>${H.map(h => { const r = st.res[h]; if (!r) return "<td></td>"; return r.w === "H" ? `<td class="rh">½</td>` : `<td class="r${r.w.toLowerCase()}">${esc(teamName(r.w)[0] || r.w)}</td>`; }).join("")}<td class="tot"></td></tr>`;
   const stat = `<tr><td class="lbl">Match</td>${H.map(h => { const a = st.after[h]; if (a == null) return "<td></td>"; return a === 0 ? `<td class="rh">AS</td>` : `<td style="color:var(--t${a > 0 ? "a" : "b"});font-weight:700">${Math.abs(a)}</td>`; }).join("")}<td class="tot"></td></tr>`;
   return `<div class="card"><div class="scroll"><table class="sc"><thead>${head}</thead><tbody>${par}${si}${rows}${res}${stat}</tbody></table></div></div>
-    <p class="hint">Dots mark shots received on a hole. ${m.format === "fourball" ? "Underlined scores are the ball that counted. " : ""}– means picked up.</p>`;
+    <p class="hint">Dots mark shots received on a hole. ${m.format === "fourball" ? "Underlined scores are the ball that counted. " : ""}– means picked up. A hole result with no strokes was entered directly.</p>`;
 }
 
 // ---------- players ----------
@@ -972,7 +987,8 @@ document.addEventListener("click", e => {
       else v = Math.max(1, Math.min(15, cur + (act === "inc" ? 1 : -1)));
       queueScore(ui.match, String(ui.hole), k, v); break;
     }
-    case "clearhole": { for (const k of entryKeys(m)) queueScore(ui.match, String(ui.hole), k, null); break; }
+    case "clearhole": { for (const k of [...entryKeys(m), "w"]) queueScore(ui.match, String(ui.hole), k, null); break; }
+    case "quick": { const cur = (m.scores[ui.hole] || {}).w; queueScore(ui.match, String(ui.hole), "w", cur === el.dataset.w ? null : el.dataset.w); break; }
     case "unlock": pinMatches(val("pin")).then(ok => { if (ok) { ui.unlocked = true; saveUi(); render(true); } else toast("That PIN isn't right."); }); break;
     case "lock": ui.unlocked = false; saveUi(); render(true); toast("Setup locked on this phone"); break;
     case "saveevent": saveEvent(); break;
