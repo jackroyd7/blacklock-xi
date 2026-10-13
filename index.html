@@ -63,7 +63,9 @@ main.wrap{padding-block:16px 48px;display:grid;grid-template-columns:minmax(0,1f
 .round{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .rhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface2)}
 .rhead h2{margin:0;font-family:var(--display);font-weight:700;font-size:1.25rem;text-transform:uppercase;letter-spacing:.04em}
-.rhead .sub{color:var(--muted);font-size:.8rem;flex:1;min-width:0}
+.rhead .sub{color:var(--muted);font-size:.8rem;flex-basis:100%;order:2;min-width:0}
+.rhead .rule{flex-basis:100%;order:3;color:var(--muted);font-size:.74rem;line-height:1.35;max-width:65ch}
+.rhead .rscore{order:1;margin-left:auto}
 .rscore{font-family:var(--display);font-weight:700;font-size:1.15rem;display:flex;gap:6px;align-items:center}
 .chip{display:inline-block;min-width:1.9em;text-align:center;padding:0 6px;border-radius:5px;color:var(--on-team);font-variant-numeric:tabular-nums}
 .mrow{display:grid;grid-template-columns:1fr 92px 1fr;align-items:stretch;width:100%;border:0;border-top:1px solid var(--line);background:none;padding:0;text-align:left}
@@ -480,6 +482,13 @@ function renderHeader(){
 }
 
 // ---------- scoreboard ----------
+// One-line summary of how shots are worked out in each format, shown under the round title.
+function handicapRule(format){
+  const a = ev.allow;
+  if (format === "fourball") return `Handicaps: each player gets ${a.fourball}% of their course handicap; everyone plays off the lowest in the match, who gets no shots.`;
+  const lo = format === "chapman" ? a.chapLow : a.greenLow, hi = format === "chapman" ? a.chapHigh : a.greenHigh;
+  return `Handicaps: each pair gets ${lo}% of the lower plus ${hi}% of the higher course handicap; the pair with more gets the difference in shots.`;
+}
 function pairCell(m, side, st){
   const ids = m[side];
   const lead = st.leader === (side === "a" ? "A" : "B") && (st.status === "live" || st.status === "final");
@@ -497,7 +506,8 @@ function renderBoard(){
   ev.rounds.forEach((r, i) => {
     const rt = t.rounds[i];
     html += `<section class="round"><div class="rhead"><h2>R${i+1} · ${FORMATS[r.format].label}</h2>
-      <span class="sub">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)} · ${r.points} pt${r.points > 1 ? "s" : ""} per match</span>
+      <span class="sub">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)}, tee ${esc(teeShort(teeOf(r)).split(" ")[0])} · ${r.points} pt${r.points > 1 ? "s" : ""} per match</span>
+      <span class="rule">${esc(handicapRule(r.format))}</span>
       <span class="rscore"><span class="chip" style="background:var(--ta)">${half(rt.A)}</span><span class="chip" style="background:var(--tb)">${half(rt.B)}</span></span></div>`;
     for (const mid of matchIds(i + 1)) {
       const m = getMatch(mid), st = matchState(m), p = pillText(st);
