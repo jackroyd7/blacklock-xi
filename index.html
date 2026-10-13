@@ -628,7 +628,7 @@ function renderModal(){
   const id = ui.profile, r = playerRecord(id), T = p.team;
   el.hidden = false;
   el.innerHTML = `<div class="modal" data-act="closeprofile"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pf-name">
-    <header style="background:var(--t${T.toLowerCase()})"><span style="font-weight:600;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;opacity:.85">${esc(teamName(T))}${p.captain ? " · Captain" : ""}</span>
+    <header style="background:var(--t${T.toLowerCase()})"><span style="font-weight:600;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;opacity:.85">${esc(teamName(T))}${p.captain ? " · Captain" : ""}${p.caps ? " · " + esc(p.caps) : ""}</span>
       <h2 id="pf-name">${esc(p.name)}</h2><button class="x" data-act="closeprofile" aria-label="Close">✕</button></header>
     <div class="body">
       ${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : `<p class="hint">No profile written yet.</p>`}
@@ -788,7 +788,9 @@ function renderSetup(){
 
     <section class="form"><h3>Player profiles</h3>
       <p class="hint">The blurb shown when someone taps a player on the Players tab.</p>
-      ${sortedPlayers().map(([id, p]) => `<label class="f">${esc(p.name)}${captBadge(p)}<textarea id="bio-${id}" rows="3" style="min-height:70px;font-family:var(--body)" ${disabled}>${esc(p.bio || "")}</textarea></label>`).join("") || `<p class="hint">Add players first.</p>`}
+      ${sortedPlayers().map(([id, p]) => `<div style="display:grid;gap:6px;padding-block:6px;border-top:1px solid var(--line)"><b>${esc(p.name)}${captBadge(p)}</b>
+        <label class="f">Caps<input type="text" id="caps-${id}" value="${esc(p.caps || "")}" placeholder="e.g. 4 caps" ${disabled} style="max-width:12rem"></label>
+        <label class="f">Blurb<textarea id="bio-${id}" rows="3" style="min-height:70px;font-family:var(--body)" ${disabled}>${esc(p.bio || "")}</textarea></label></div>`).join("") || `<p class="hint">Add players first.</p>`}
       ${Object.keys(players).length ? `<div><button class="btn pri" data-act="savebios">Save profiles</button></div>` : ""}</section>
 
     <section class="form"><h3>Course handicaps</h3>
@@ -834,7 +836,10 @@ async function saveCourse(){
 async function saveBios(){
   if (blocked()) return;
   const batch = fs.batch(); let n = 0;
-  for (const [id, p] of Object.entries(players)) { const bio = val("bio-" + id).trim(); if (bio !== (p.bio || "")) { batch.update(fs.doc("players/" + id), { bio }); n++; } }
+  for (const [id, p] of Object.entries(players)) {
+    const d = { bio: val("bio-" + id).trim(), caps: val("caps-" + id).trim() };
+    if (d.bio !== (p.bio || "") || d.caps !== (p.caps || "")) { batch.update(fs.doc("players/" + id), d); n++; }
+  }
   if (!n) { toast("No changes to save"); return; }
   try { await batch.commit(); toast(`Saved ${n} profile${n > 1 ? "s" : ""}`); render(true); } catch (e) { onWriteError(e); }
 }
