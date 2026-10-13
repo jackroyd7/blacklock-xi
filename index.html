@@ -232,7 +232,9 @@ const DEFAULT_EVENT = {
       si:  [14,18,6,2,16,12,8,4,10, 9,7,11,1,13,5,17,3,15] },
     stadium: { name: "Stadium",
       tees: [
-        { id: "65", name: "65 men (6,530 m)",  rating: 76.0, slope: 155, m: [398,350,489,376,190,370,496,169,437, 368,172,482,363,405,450,183,421,411] },
+        { id: "65", name: "65 men (6,530 m)",  rating: 76.0, slope: 155,
+          // The club's printed sheet for this tee differs from the formula by up to one shot, so use the sheet.
+          table: { from: -4.5, first: -2, upTo: [-4.1,-3.4,-2.6,-1.9,-1.2,-0.4,0.3,1.1,1.8,2.5,3.3,4.0,4.7,5.5,6.2,6.9,7.7,8.4,9.1,9.9,10.6,11.3,12.1,12.8,13.5,14.3,15.0,15.7,16.5,17.2,17.9,18.7,19.4,20.1,20.9,21.6,22.3,23.1,23.8,24.5,25.3,26.0,26.7,27.5,28.2,28.9,29.7,30.4,31.1,31.9,32.6,33.3,34.1,34.8,35.5,36.3,37.0,37.7,38.5,39.2,39.9,40.7,41.4,42.1,42.9,43.6,44.3,45.1,45.8,46.5,47.3,48.0,48.7,49.5,50.2,50.9,51.7,52.4,53.1,53.9,54.1] }, m: [398,350,489,376,190,370,496,169,437, 368,172,482,363,405,450,183,421,411] },
         { id: "60", name: "60 men (6,042 m)", rating: 73.2, slope: 148, def: true, m: [361,324,457,359,174,312,476,136,392, 347,150,472,350,381,445,160,364,382] },
         { id: "56", name: "56 men (5,632 m)",   rating: 71.3, slope: 142, m: [321,311,432,342,162,281,450,120,374, 317,130,462,328,353,401,136,352,360] },
         { id: "56W", name: "56 ladies (5,632 m)",     rating: 77.3, slope: 151, m: [321,311,432,342,162,281,450,120,374, 317,130,462,328,353,401,136,352,360] },
@@ -304,6 +306,11 @@ function roundLabel(n){ const r = ev.rounds[n-1]; return `R${n} ${roundCourse(r)
 // Course handicap = Index × Slope ÷ 113 + (Rating − Par), from the tee the round is played off.
 function calcHcp(index, c, tee){
   if (index == null || index === "") return 0;
+  const tb = tee && tee.table;
+  if (tb && index >= tb.from && index <= tb.upTo[tb.upTo.length - 1]) {
+    const i10 = Math.round(index * 10), k = tb.upTo.findIndex(u => i10 <= Math.round(u * 10));
+    return tb.first + k;
+  }
   const slope = parseFloat(tee && tee.slope), rating = parseFloat(tee && tee.rating);
   if (isFinite(slope) && slope > 0 && isFinite(rating)) return Math.round(index * slope / 113 + (rating - sum(c.par)));
   return Math.round(index);
@@ -691,7 +698,7 @@ function renderCourse(){
       ${teeRows.map(t => row(esc(t.id.replace("W", "")) + " <small class=\"hint\">m</small>", t.m, "tee")).join("")}
       ${row("<b>Par</b>", c.par)}${row("<b>SI</b>", c.si, "si")}</tbody></table></div></div>`;
     const tees = c.tees.map(t => `<details class="tee"><summary>${esc(t.name)}<span>Rating ${t.rating} · Slope ${t.slope} · Par ${sum(c.par)}</span></summary>
-      <p class="hint" style="margin:6px 0">Handicap index range → course handicap</p>
+      <p class="hint" style="margin:6px 0">Handicap index range → course handicap${t.table ? ". This tee follows the club's printed slope sheet, which differs from the formula by up to one shot." : ""}</p>
       <div class="bands">${chBands(c, t).map(b => `<div><span>${b.from === b.to ? fmtIdx1(b.from) : `${fmtIdx1(b.from)} – ${fmtIdx1(b.to)}`}</span><b>${fmtHcp(b.ch)}</b></div>`).join("")}</div></details>`).join("");
     return `<section class="round"><div class="rhead"><h2>${esc(c.name)} course</h2><span class="sub">${esc(rounds)}</span></div>
       <div style="padding:12px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px"><b>Scorecard</b>${card}<b>Tees, ratings and handicap tables</b><div>${tees}</div></div></section>`;
@@ -700,7 +707,7 @@ function renderCourse(){
     <div class="form"><h3>Handicap calculator</h3>
       <label class="f">Handicap index (use + for plus handicaps)<input type="text" inputmode="decimal" id="cc-index" class="ccbig" value="${esc(ui.cc.index)}" placeholder="e.g. 14.2" autocomplete="off"></label>
       <div id="cc-out">${ccRows(parseIndex(ui.cc.index))}</div>
-      <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), rounded. This is the method behind Camiral's slope sheets. Ratings, slopes, lengths, par and stroke index come from the club's official scorecards and slope sheets.</p></div>
+      <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), rounded, which matches Camiral's slope sheets. Stadium tee 65 uses the club's printed sheet directly, because it differs slightly from the formula. Ratings, slopes, lengths, par and stroke index come from the club's official scorecards and slope sheets.</p></div>
     ${courses}`;
 }
 
