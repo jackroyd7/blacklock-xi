@@ -40,7 +40,16 @@ button{cursor:pointer}
 .evname small{font-family:var(--body);font-weight:500;font-size:.75rem;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
 .evmeta{font-size:.78rem;color:var(--muted);white-space:nowrap}
 .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:5px;vertical-align:1px}
-.board{display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:var(--r);overflow:hidden}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:var(--r);overflow:hidden;cursor:pointer}
+.board:hover .big{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.rsum{display:grid;gap:8px}
+.rsum .rr{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.rsum .rr:last-child{border-bottom:0}
+.rsum .rn{font-family:var(--display);font-weight:700;font-size:1.15rem;text-transform:uppercase;letter-spacing:.03em}
+.rsum .rd{color:var(--muted);font-size:.78rem}
+.rsum .sc2{display:flex;align-items:center;gap:6px;font-weight:600;font-size:.9rem;white-space:nowrap}
+.rsum .sc2 .chip{font-family:var(--display);font-size:1.15rem;min-width:2.2em}
+.rsum .tot .rn{font-size:1.3rem}
 .side{color:var(--on-team);padding:8px 12px;display:grid;grid-template-columns:1fr auto;align-items:end;min-width:0}
 .side.a{background:var(--ta)} .side.b{background:var(--tb);grid-template-columns:auto 1fr;text-align:right}
 .tname{font-family:var(--display);font-weight:600;font-size:1rem;text-transform:uppercase;letter-spacing:.06em;line-height:1.1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -484,7 +493,7 @@ function renderHeader(){
   const tab = (id, label) => `<button data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${label}</button>`;
   $hdr.innerHTML = `
     <div class="evline"><span class="evname">${esc(ev.name)}<small>${esc(ev.venue)}</small></span><span class="evmeta">${t.live ? '<span class="live-dot"></span>Live · ' : ""}${t.total} pts · ${status}</span></div>
-    <div class="board">
+    <div class="board" data-act="scores" role="button" tabindex="0" aria-label="Show the score for each round">
       <div class="side a"><span class="tname">${esc(teamName("A"))}<span class="proj">Projected ${half(t.A.proj)}</span></span><span class="big">${half(t.A.won)}</span></div>
       <div class="side b"><span class="big">${half(t.B.won)}</span><span class="tname">${esc(teamName("B"))}<span class="proj">Projected ${half(t.B.proj)}</span></span></div>
     </div>
@@ -665,8 +674,28 @@ function renderPlayer(pid){
     <div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Match</th><th>Result</th><th></th></tr></thead><tbody>${items || `<tr><td colspan="3" class="hint">Not in any pairing yet</td></tr>`}</tbody></table></div></div>`;
 }
 
+function renderScores(el){
+  const t = totals(), A = teamName("A"), B = teamName("B");
+  const line = (a, b) => `<span class="sc2">${esc(A)} <span class="chip" style="background:var(--ta)">${half(a)}</span>–<span class="chip" style="background:var(--tb)">${half(b)}</span> ${esc(B)}</span>`;
+  const rows = ev.rounds.map((r, i) => {
+    const ms = matchIds(i + 1).map(getMatch), sts = ms.map(matchState);
+    const fin = sts.filter(x => x.status === "final").length, live = sts.filter(x => x.status === "live").length;
+    let proj = { A: 0, B: 0 }; ms.forEach((m, j) => { const pp = matchPoints(m, sts[j], true); proj.A += pp.A; proj.B += pp.B; });
+    const state = fin === ms.length ? "Complete" : live ? `${fin} of ${ms.length} finished, ${live} in play (projected ${half(proj.A)}–${half(proj.B)})` : fin ? `${fin} of ${ms.length} finished` : "Not started";
+    return `<div class="rr"><span class="rn">R${i+1} · ${FORMATS[r.format].label}</span>${line(t.rounds[i].A, t.rounds[i].B)}
+      <span class="rd">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)} · ${r.points * ms.length} pts available · ${esc(state)}</span></div>`;
+  }).join("");
+  el.hidden = false;
+  el.innerHTML = `<div class="modal" data-act="closeprofile"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sc-title">
+    <header style="background:linear-gradient(90deg,var(--ta) 50%,var(--tb) 50%)"><span></span><div class="meta"><span style="font-weight:600;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;opacity:.85">${t.total} points · ${half(t.toWin)} to win</span>
+      <h2 id="sc-title">Score by round</h2></div><button class="x" data-act="closeprofile" aria-label="Close">✕</button></header>
+    <div class="body"><div class="rsum">${rows}<div class="rr tot"><span class="rn">Total</span>${line(t.A.won, t.B.won)}
+      <span class="rd">Projected if live matches finish as they stand: ${esc(A)} ${half(t.A.proj)}, ${esc(B)} ${half(t.B.proj)}</span></div></div></div></div></div>`;
+}
 function renderModal(){
-  const el = document.getElementById("modal"), p = ui.profile && players[ui.profile];
+  const el = document.getElementById("modal");
+  if (ui.scores) return renderScores(el);
+  const p = ui.profile && players[ui.profile];
   if (!p) { el.innerHTML = ""; el.hidden = true; return; }
   const id = ui.profile, r = playerRecord(id), T = p.team;
   el.hidden = false;
@@ -1111,7 +1140,8 @@ document.addEventListener("click", e => {
     case "close": ui.match = null; saveUi(); render(true); break;
     case "player": ui.profile = null; ui.tab = "players"; ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
     case "profile": ui.profile = el.dataset.id; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
-    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; renderModal(); } break;
+    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; renderModal(); } break;
+    case "scores": ui.scores = true; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
     case "savebios": saveBios(); break;
     case "hole": { const h = +el.dataset.h; if (h >= 1 && h <= 18) { ui.hole = h; render(); } break; }
     case "inc": case "dec": case "pu": {
@@ -1163,7 +1193,10 @@ document.addEventListener("change", e => {
     document.getElementById("prev-" + mid).innerHTML = pairPreview(mid, a, b);
   }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && ui.profile) { ui.profile = null; renderModal(); } });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && (ui.profile || ui.scores)) { ui.profile = null; ui.scores = false; renderModal(); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.act === "scores") { e.preventDefault(); e.target.click(); }
+});
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "pin") document.querySelector('[data-act="unlock"]')?.click(); });
 
 // ---------- boot ----------
