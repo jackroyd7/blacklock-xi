@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#1d4f91">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Blacklock XI</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
@@ -46,6 +48,7 @@ button{cursor:pointer}
 .scard{max-width:420px;border-radius:16px!important;max-height:calc(100% - 24px)!important;text-align:center}
 .scard .top{position:relative;color:var(--on-team);background:linear-gradient(90deg,var(--ta) 50%,var(--tb) 50%);padding:16px 14px 14px;display:grid;gap:4px;justify-items:center}
 .scard .top .x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:var(--on-team);font-size:1rem}
+.scard .crest{width:64px;height:64px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);margin-bottom:2px}
 .scard .ev{font-weight:600;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.9}
 .scard .totals{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;width:100%}
 .scard .totals .tn{font-family:var(--display);font-weight:700;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase}
@@ -708,6 +711,7 @@ function renderScores(el){
   el.hidden = false;
   el.innerHTML = `<div class="modal centre" data-act="closeprofile"><div class="sheet scard" role="dialog" aria-modal="true" aria-labelledby="sc-title">
     <div class="top"><button class="x" data-act="closeprofile" aria-label="Close">✕</button>
+      <img class="crest" src="logo.png" alt="Blacklock XI crest" width="64" height="64">
       <span class="ev" id="sc-title">${esc(ev.name)} · ${esc(ev.venue)} ${esc(ev.year)}</span>
       <div class="totals"><span class="tn a">${esc(A)}</span><span class="big2">${half(t.A.won)} – ${half(t.B.won)}</span><span class="tn b">${esc(B)}</span></div>
       <span class="sub2">${status}</span></div>
