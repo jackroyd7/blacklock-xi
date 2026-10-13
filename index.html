@@ -142,7 +142,7 @@ table{border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-num
 h2.sec{font-family:var(--display);font-weight:700;font-size:1.25rem;text-transform:uppercase;letter-spacing:.04em;margin:0}
 p.lead{margin:0;color:var(--muted);max-width:65ch}
 
-.form{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:12px}
+.form{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .form h3{margin:0;font-family:var(--display);font-weight:700;font-size:1.15rem;text-transform:uppercase;letter-spacing:.04em}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
 label.f{display:grid;gap:3px;font-size:.78rem;font-weight:600;color:var(--muted);min-width:0}
@@ -156,10 +156,30 @@ textarea{min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:
 .pairrow .mn{font-family:var(--display);font-weight:700;font-size:1.1rem;grid-row:span 2}
 .pairrow .ps{display:grid;gap:4px;min-width:0;border-left:4px solid;padding-left:8px}
 .pairrow .prev{grid-column:2/4;font-size:.78rem;color:var(--muted)}
-.prow{display:grid;grid-template-columns:1fr 110px 80px auto;gap:6px;align-items:center}
+.prow{display:grid;grid-template-columns:1fr 110px 72px 58px auto;gap:6px;align-items:center}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .hint{font-size:.8rem;color:var(--muted);margin:0}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.88rem;font-weight:600;z-index:50;max-width:calc(100% - 32px)}
+.capt{display:inline-block;margin-left:6px;padding:0 5px;border-radius:4px;font-size:.68rem;font-weight:800;letter-spacing:.04em;color:var(--on-team);vertical-align:2px}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(10,16,12,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.sheet{background:var(--surface);color:var(--ink);border-radius:14px;width:100%;max-width:480px;max-height:calc(100% - 32px);overflow:auto;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.sheet header{color:var(--on-team);padding:16px 18px 14px;display:grid;gap:2px;position:relative}
+.sheet header h2{margin:0;font-family:var(--display);font-weight:700;font-size:1.8rem;line-height:1;text-transform:uppercase;letter-spacing:.03em;padding-right:36px}
+.sheet header .x{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:var(--on-team);font-size:1.2rem}
+.sheet .body{padding:16px 18px 18px;display:grid;gap:12px}
+.sheet .bio{white-space:pre-line;line-height:1.55;max-width:65ch}
+.sheet .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;text-align:center}
+.sheet .stats div{background:var(--surface2);border-radius:8px;padding:6px 2px;font-size:.72rem;color:var(--muted)}
+.sheet .stats b{display:block;font-family:var(--display);font-size:1.35rem;color:var(--ink)}
+@media (max-width:520px){.modal{align-items:flex-end;padding:0}.sheet{border-radius:14px 14px 0 0;max-height:88%;padding-bottom:env(safe-area-inset-bottom,0px)}}
+.bands{columns:3 9rem;column-gap:18px;font-size:.8rem;font-variant-numeric:tabular-nums}
+.bands div{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.bands b{font-family:var(--display);font-size:.95rem}
+details.tee{border-top:1px solid var(--line);padding-block:8px}
+details.tee summary{cursor:pointer;font-weight:600;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
+.ccbig{font-size:1.4rem;max-width:12rem;font-family:var(--display);font-weight:700}
+.sc .tee td:first-child{font-weight:600}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
 
 @media (max-width:520px){
@@ -169,7 +189,7 @@ textarea{min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:
   .pair{font-size:.84rem;padding:8px}
   .pinfo{grid-template-columns:1fr}
   .holes{grid-template-columns:repeat(6,minmax(0,1fr))}
-  .prow{grid-template-columns:1fr 88px 64px auto}
+  .prow{grid-template-columns:1fr 84px 56px 50px auto}
   .step button{width:40px;height:40px}
   .step .val{width:38px}
 }
@@ -180,6 +200,7 @@ textarea{min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:
 <header class="top"><div class="wrap" id="hdr"></div></header>
 <main class="wrap" id="app"><div class="empty">Loading the scoreboard…</div></main>
 <div class="toast" id="toast" hidden></div>
+<div id="modal"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -192,25 +213,40 @@ const FORMATS = {
   chapman:    { label: "Chapman",    note: "Both drive, swap balls for the second shot, then pick one ball and play alternate shots in." },
   greensomes: { label: "Greensomes", note: "Both drive, pick the better drive, then play alternate shots in." }
 };
-// Camiral scorecards (men's yellow tees). Check slope/rating against the card on the day and edit in Setup if needed.
+// Camiral scorecards. Tee ratings and slopes from the club's official slope sheets (camiral.com).
+// Check against the card on the day and edit in Setup if needed.
 const DEFAULT_EVENT = {
   name: "Blacklock XI",
   venue: "Camiral",
   teams: { A: { name: "Crows", color: "#1d4f91" }, B: { name: "Smugglers", color: "#b42335" } },
   courses: {
-    tour: { name: "Tour", tee: "Yellow", slope: 136, rating: 70.4,
+    tour: { name: "Tour",
+      tees: [
+        { id: "58", name: "58 men (5,863 m)",  rating: 72.5, slope: 141, m: [341,150,317,420,466,311,509,168,327, 450,152,313,367,138,459,129,371,475] },
+        { id: "54", name: "54 men (5,476 m)", rating: 70.4, slope: 136, def: true, m: [321,136,295,395,448,284,440,160,310, 429,134,297,347,120,445,109,355,451] },
+        { id: "50", name: "50 men (5,080 m)",   rating: 68.7, slope: 130, m: [298,114,277,371,434,256,408,142,294, 413,112,278,326,108,415,101,326,407] },
+        { id: "50W", name: "50 ladies (5,080 m)",     rating: 73.6, slope: 133, m: [298,114,277,371,434,256,408,142,294, 413,112,278,326,108,415,101,326,407] },
+        { id: "46W", name: "46 ladies (4,681 m)",      rating: 71.3, slope: 132, m: [260,106,246,345,395,236,371,116,267, 394,99,272,307,96,395,93,306,377] }
+      ],
       par: [4,3,4,4,5,4,5,3,4, 5,3,4,4,3,5,3,4,5],
       si:  [14,18,6,2,16,12,8,4,10, 9,7,11,1,13,5,17,3,15] },
-    stadium: { name: "Stadium", tee: "Yellow", slope: 148, rating: 73.2,
+    stadium: { name: "Stadium",
+      tees: [
+        { id: "65", name: "65 men (6,530 m)",  rating: 76.0, slope: 155, m: [398,350,489,376,190,370,496,169,437, 368,172,482,363,405,450,183,421,411] },
+        { id: "60", name: "60 men (6,042 m)", rating: 73.2, slope: 148, def: true, m: [361,324,457,359,174,312,476,136,392, 347,150,472,350,381,445,160,364,382] },
+        { id: "56", name: "56 men (5,632 m)",   rating: 71.3, slope: 142, m: [321,311,432,342,162,281,450,120,374, 317,130,462,328,353,401,136,352,360] },
+        { id: "56W", name: "56 ladies (5,632 m)",     rating: 77.3, slope: 151, m: [321,311,432,342,162,281,450,120,374, 317,130,462,328,353,401,136,352,360] },
+        { id: "49W", name: "49 ladies (4,999 m)",      rating: 73.4, slope: 141, m: [296,260,387,324,145,245,416,100,337, 263,109,400,315,304,364,112,293,329] }
+      ],
       par: [4,4,5,4,3,4,5,3,4, 4,3,5,4,4,5,3,4,4],
       si:  [3,5,13,9,7,11,17,15,1, 12,16,14,6,4,18,10,8,2] }
   },
   allow: { fourball: 90, chapLow: 60, chapHigh: 40, greenLow: 60, greenHigh: 40 },
   rounds: [
-    { day: "Day 1", session: "Morning",   format: "fourball",   points: 2, course: "tour" },
-    { day: "Day 1", session: "Afternoon", format: "chapman",    points: 1, course: "stadium" },
-    { day: "Day 2", session: "Morning",   format: "greensomes", points: 1, course: "tour" },
-    { day: "Day 2", session: "Afternoon", format: "fourball",   points: 2, course: "stadium" }
+    { day: "Day 1", session: "Morning",   format: "fourball",   points: 1, course: "tour",    tee: "54" },
+    { day: "Day 1", session: "Afternoon", format: "chapman",    points: 1, course: "stadium", tee: "60" },
+    { day: "Day 2", session: "Morning",   format: "greensomes", points: 1, course: "tour",    tee: "54" },
+    { day: "Day 2", session: "Afternoon", format: "fourball",   points: 2, course: "stadium", tee: "60" }
   ]
 };
 const COURSE_KEYS = ["tour", "stadium"];
@@ -221,8 +257,8 @@ let ev = clone(DEFAULT_EVENT), players = {}, matches = {};
 const loaded = { ev: false, p: false, m: false };
 const pending = {}, inflight = {}, timers = {};
 const ui = Object.assign({ tab: "board", match: null, hole: 1, player: null, unlocked: false,
-  calc: { format: "fourball", course: "tour", a: ["", ""], b: ["", ""] } }, loadUi());
-if (!ui.calc.course) ui.calc.course = "tour";
+  calc: { format: "fourball", round: 1, a: ["", ""], b: ["", ""] } }, loadUi());
+if (!(ui.calc.round >= 1 && ui.calc.round <= 4)) ui.calc.round = 1;
 
 const $hdr = document.getElementById("hdr"), $app = document.getElementById("app"), $toast = document.getElementById("toast");
 
@@ -232,14 +268,19 @@ function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;",
 function half(n){ const w = Math.floor(n), h = Math.abs(n - w) > 0.01; return (w === 0 && h) ? "½" : (w + (h ? "½" : "")); }
 function sum(a){ return a.reduce((s, x) => s + (+x || 0), 0); }
 function loadUi(){ try { return JSON.parse(localStorage.getItem("blacklock-ui") || "{}"); } catch { return {}; } }
-function saveUi(){ try { localStorage.setItem("blacklock-ui", JSON.stringify({ tab: ui.tab, match: ui.match, player: ui.player, calc: ui.calc, unlocked: ui.unlocked })); } catch {} }
+function saveUi(){ try { localStorage.setItem("blacklock-ui", JSON.stringify({ cc: ui.cc, tab: ui.tab, match: ui.match, player: ui.player, calc: ui.calc, unlocked: ui.unlocked })); } catch {} }
 let toastT; function toast(msg){ $toast.textContent = msg; $toast.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => $toast.hidden = true, 2600); }
 function mergeEvent(d){
   const e = clone(DEFAULT_EVENT); if (!d) return e;
   if (d.name) e.name = d.name;
   if (d.venue != null) e.venue = d.venue;
   for (const t of ["A","B"]) Object.assign(e.teams[t], (d.teams || {})[t] || {});
-  for (const k of COURSE_KEYS) Object.assign(e.courses[k], (d.courses || {})[k] || {});
+  for (const k of COURSE_KEYS) {
+    const dc = (d.courses || {})[k] || {}, base = e.courses[k];
+    // Merge tees by id so saved edits keep data added in later versions (e.g. hole lengths).
+    const tees = Array.isArray(dc.tees) ? dc.tees.map(t => Object.assign({}, base.tees.find(b => b.id === t.id) || {}, t)) : base.tees;
+    Object.assign(base, dc, { tees });
+  }
   Object.assign(e.allow, d.allow || {});
   if (Array.isArray(d.rounds) && d.rounds.length === 4) e.rounds = d.rounds.map((r, i) => Object.assign({}, e.rounds[i], r));
   return e;
@@ -249,17 +290,29 @@ function fmtIndex(n){ if (n == null || n === "") return "–"; return n < 0 ? "+
 function fmtHcp(n){ return n < 0 ? "+" + Math.abs(n) : String(n); }
 function teamName(t){ return ev.teams[t].name; }
 function pname(id){ return players[id] ? players[id].name : "?"; }
-function sortedPlayers(team){ return Object.entries(players).filter(([, p]) => !team || p.team === team).sort((a, b) => a[1].name.localeCompare(b[1].name)); }
+function sortedPlayers(team){ return Object.entries(players).filter(([, p]) => !team || p.team === team).sort((a, b) => (team ? 0 : a[1].team.localeCompare(b[1].team)) || (!!b[1].captain - !!a[1].captain) || a[1].name.localeCompare(b[1].name)); }
+function teeShort(t){ return t.name.split(" (")[0]; }
+function captBadge(p){ return p.captain ? `<span class="capt" style="background:var(--t${p.team.toLowerCase()})" title="Captain">C</span>` : ""; }
 function applyTeamColors(){ document.documentElement.style.setProperty("--ta", ev.teams.A.color); document.documentElement.style.setProperty("--tb", ev.teams.B.color); }
 function course(key){ return ev.courses[key] || ev.courses.tour; }
 function roundCourse(r){ return course(r.course); }
+function defTee(c){ return c.tees.find(t => t.def) || c.tees[0]; }
+function teeOf(r){ const c = roundCourse(r); return c.tees.find(t => t.id === r.tee) || defTee(c); }
+function roundLabel(n){ const r = ev.rounds[n-1]; return `R${n} ${roundCourse(r).name}`; }
 
 // ---------- handicaps ----------
-function courseHcp(index, c){
+// Course handicap = Index × Slope ÷ 113 + (Rating − Par), from the tee the round is played off.
+function calcHcp(index, c, tee){
   if (index == null || index === "") return 0;
-  const slope = parseFloat(c.slope), rating = parseFloat(c.rating);
+  const slope = parseFloat(tee && tee.slope), rating = parseFloat(tee && tee.rating);
   if (isFinite(slope) && slope > 0 && isFinite(rating)) return Math.round(index * slope / 113 + (rating - sum(c.par)));
   return Math.round(index);
+}
+function hcpOverride(pid, n){ const o = players[pid] && players[pid].ch && players[pid].ch["r" + n]; return typeof o === "number" ? o : null; }
+// A course handicap typed in Setup for that round wins over the calculation.
+function roundHcp(pid, n){
+  const o = hcpOverride(pid, n); if (o != null) return o;
+  const r = ev.rounds[n-1]; return calcHcp(players[pid].index, roundCourse(r), teeOf(r));
 }
 function shotsFor(format, chA, chB){
   if (format === "fourball") {
@@ -284,10 +337,11 @@ function getMatch(mid){
   for (const layer of [inflight[mid], pending[mid]]) if (layer) for (const h in layer) m.scores[h] = Object.assign(m.scores[h] || {}, layer[h]);
   m.r = ev.rounds[m.round - 1];
   m.c = roundCourse(m.r);
+  m.tee = teeOf(m.r);
   m.format = m.r.format;
   m.ready = m.a.length === 2 && m.b.length === 2 && [...m.a, ...m.b].every(id => id && players[id]);
   if (m.ready) {
-    const ch = id => (m.hcp && m.hcp[id] != null) ? m.hcp[id] : courseHcp(players[id].index, m.c);
+    const ch = id => (m.hcp && m.hcp[id] != null) ? m.hcp[id] : roundHcp(id, m.round);
     m.ch = { a: m.a.map(ch), b: m.b.map(ch) };
     Object.assign(m, shotsFor(m.format, m.ch.a, m.ch.b));
   }
@@ -381,7 +435,7 @@ async function flush(mid){
   const FP = firebase.firestore.FieldPath, args = [];
   for (const h in scores) for (const k in scores[h]) args.push(new FP("scores", h, k), scores[h][k]);
   const base = matches[mid] || {}, m = getMatch(mid);
-  if (!base.hcp && m.ready) { const hcp = {}; [...m.a, ...m.b].forEach(id => hcp[id] = courseHcp(players[id].index, m.c)); args.push("hcp", hcp); }
+  if (!base.hcp && m.ready) { const hcp = {}; [...m.a, ...m.b].forEach(id => hcp[id] = roundHcp(id, m.round)); args.push("hcp", hcp); }
   try { await fs.doc("matches/" + mid).update(...args); }
   catch (e) { onWriteError(e); }
   finally { delete inflight[mid]; render(); }
@@ -406,7 +460,7 @@ function renderHeader(){
       <i style="right:0;width:${pct(t.B.won)};background:var(--tb)"></i>
       <i class="mid"></i>
     </div>
-    <nav class="tabs">${tab("board","Scoreboard")}${tab("players","Players")}${tab("shots","Shots")}${tab("setup","Setup")}</nav>`;
+    <nav class="tabs">${tab("board","Scoreboard")}${tab("players","Players")}${tab("shots","Shots")}${tab("course","Course")}${tab("setup","Setup")}</nav>`;
 }
 
 // ---------- scoreboard ----------
@@ -450,7 +504,7 @@ function renderMatch(){
   const col = st.leader ? (st.leader === "A" ? "var(--ta)" : "var(--tb)") : "var(--ink)";
   let html = `<div class="mhead"><button class="back" data-act="close">‹ Scoreboard</button>
     <h1 class="mtitle">Round ${m.round} · ${FORMATS[m.format].label} · Match ${m.slot}</h1>
-    <p class="hint">${esc(m.r.day)} ${esc(m.r.session)} · ${esc(m.c.name)} course · worth ${m.r.points} pt${m.r.points > 1 ? "s" : ""}. ${FORMATS[m.format].note}</p>
+    <p class="hint">${esc(m.r.day)} ${esc(m.r.session)} · ${esc(m.c.name)} course, tee ${esc(m.tee.name)} · worth ${m.r.points} pt${m.r.points > 1 ? "s" : ""}. ${FORMATS[m.format].note}</p>
     <div class="banner">${pairCell(m, "a", st)}<div class="pill${st.status === "final" ? " fin" : ""}" style="color:${col}">${esc(p.main)}<small>${esc(p.sub)}</small></div>${pairCell(m, "b", st)}</div></div>`;
   if (!m.ready) { $app.innerHTML = html + `<div class="empty">This match has no pairing yet. Set it in <b>Setup → Pairings</b>.</div>`; return; }
 
@@ -458,11 +512,15 @@ function renderMatch(){
     `${m.format === "chapman" ? ev.allow.chapLow : ev.allow.greenLow}% low + ${m.format === "chapman" ? ev.allow.chapHigh : ev.allow.greenHigh}% high, shots off the lower pair`;
   const pcard = side => {
     const T = side === "a" ? "A" : "B";
-    let rows = m[side].map((id, i) => `<div class="ln"><span>${esc(pname(id))}</span><span class="num">CH ${fmtHcp(m.ch[side][i])}${m.format === "fourball" ? ` · PH ${fmtHcp(m.ph[side][i])} · <b>${m.shots[side][i]} shots</b>` : ""}</span></div>`).join("");
+    let rows = m[side].map((id, i) => `<div class="ln"><span>${esc(pname(id))}</span><span class="num">CH ${fmtHcp(m.ch[side][i])}${hcpOverride(id, m.round) != null ? "*" : ""}${m.format === "fourball" ? ` · PH ${fmtHcp(m.ph[side][i])} · <b>${m.shots[side][i]} shots</b>` : ""}</span></div>`).join("");
     if (m.format !== "fourball") rows += `<div class="ln"><span>Pair handicap ${fmtHcp(m.ph[side][0])}</span><b class="num">${m.shots[side][0]} shots</b></div>`;
     return `<div class="card"><span class="t" style="color:var(--t${side})">${esc(teamName(T))}</span>${rows}</div>`;
   };
-  html += `<div class="pinfo">${pcard("a")}${pcard("b")}</div><p class="hint">Allowance: ${allowTxt}.${m.hcp ? " Handicaps locked when scoring started." : ""}</p>`;
+  html += `<div class="pinfo">${pcard("a")}${pcard("b")}</div><p class="hint">Allowance: ${allowTxt}. CH = course handicap${[...m.a, ...m.b].some(id => hcpOverride(id, m.round) != null) ? " (* entered by hand)" : ""}.${m.hcp ? " Handicaps were locked when scoring started." : ""}</p>`;
+  if (m.hcp && !setupLocked() && !noDb) {
+    const changed = [...m.a, ...m.b].some(id => m.hcp[id] !== roundHcp(id, m.round));
+    if (changed) html += `<div class="notice"><b>Handicaps have changed</b> in Setup since this match started. <button class="btn" data-act="refreshhcp" style="margin-left:6px">Use new handicaps</button></div>`;
+  }
 
   const h = ui.hole;
   html += `<div class="hstrip">` + Array.from({ length: 18 }, (_, i) => {
@@ -536,10 +594,10 @@ function renderPlayers(){
   if (!Object.keys(players).length) { $app.innerHTML = `<div class="empty">No players yet. Add them in <b>Setup</b>.</div>`; return; }
   const card = T => {
     const rows = sortedPlayers(T).map(([id, p]) => { const r = playerRecord(id);
-      return `<tr class="click" data-act="player" data-id="${id}"><td>${esc(p.name)}</td><td>${fmtIndex(p.index)}</td>${COURSE_KEYS.map(k => `<td>${fmtHcp(courseHcp(p.index, course(k)))}</td>`).join("")}<td>${r.W}-${r.H}-${r.L}</td><td><b>${half(r.pts)}</b></td></tr>`; }).join("");
-    return `<div class="teamcard"><h3 style="background:var(--t${T.toLowerCase()})">${esc(teamName(T))}</h3><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th><th>Index</th>${COURSE_KEYS.map(k => `<th>${esc(course(k).name)}</th>`).join("")}<th>W-H-L</th><th>Pts</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="hint">No players</td></tr>`}</tbody></table></div></div>`;
+      return `<tr class="click" data-act="profile" data-id="${id}"><td>${esc(p.name)}${captBadge(p)}</td><td>${fmtIndex(p.index)}</td>${[1,2,3,4].map(n => `<td>${fmtHcp(roundHcp(id, n))}${hcpOverride(id, n) != null ? "*" : ""}</td>`).join("")}<td>${r.W}-${r.H}-${r.L}</td><td><b>${half(r.pts)}</b></td></tr>`; }).join("");
+    return `<div class="teamcard"><h3 style="background:var(--t${T.toLowerCase()})">${esc(teamName(T))}</h3><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th><th>Index</th>${[1,2,3,4].map(n => `<th title="${esc(roundLabel(n))}">R${n}</th>`).join("")}<th>W-H-L</th><th>Pts</th></tr></thead><tbody>${rows || `<tr><td colspan="8" class="hint">No players</td></tr>`}</tbody></table></div></div>`;
   };
-  $app.innerHTML = `<h2 class="sec">Players</h2><p class="lead">Tap a player to see every match and scorecard they've played. The course columns show course handicap on each course; Pts counts the points won by matches they played in.</p><div class="teamgrid">${card("A")}${card("B")}</div>`;
+  $app.innerHTML = `<h2 class="sec">Players</h2><p class="lead">Tap a player for their profile, matches and scorecards. Captains are listed first. R1–R4 show each player's course handicap for that round from the tees it's played off (* = entered by hand). Pts counts the points won by matches they played in.</p><div class="teamgrid">${card("A")}${card("B")}</div>`;
 }
 function renderPlayer(pid){
   const p = players[pid], r = playerRecord(pid), T = p.team;
@@ -551,20 +609,36 @@ function renderPlayer(pid){
     return `<tr class="click" data-act="open" data-id="${m.id}"><td>R${m.round} ${FORMATS[m.format].label} · ${esc(m.c.name)}<br><small class="hint">with ${esc(partner)} v ${esc(opp)}</small></td><td>${esc(pt.main)} <small class="hint">${esc(pt.sub)}</small></td><td>${badge}</td></tr>`;
   }).join("");
   $app.innerHTML = `<button class="back" data-act="player" data-id="">‹ All players</button>
-    <div class="teamcard"><h3 style="background:var(--t${T.toLowerCase()})">${esc(p.name)}</h3>
-    <div style="padding:12px" class="pinfo"><div><div class="hint">${esc(teamName(T))}</div><div class="num">Index ${fmtIndex(p.index)} · ${COURSE_KEYS.map(k => `${esc(course(k).name)} CH ${fmtHcp(courseHcp(p.index, course(k)))}`).join(" · ")}</div></div>
+    <div class="teamcard"><h3 style="background:var(--t${T.toLowerCase()})">${esc(p.name)}${p.captain ? " · Captain" : ""}</h3>
+    <div style="padding:12px" class="pinfo"><div><div class="hint">${esc(teamName(T))}</div><div class="num">Index ${fmtIndex(p.index)}</div><div class="num hint">Course handicap: ${[1,2,3,4].map(n => `${esc(roundLabel(n))} ${fmtHcp(roundHcp(pid, n))}${hcpOverride(pid, n) != null ? "*" : ""}`).join(" · ")}</div></div>
     <div class="num"><b>${r.W}-${r.H}-${r.L}</b> (W-H-L) · <b>${half(r.pts)}</b> pts won</div></div>
     <div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Match</th><th>Result</th><th></th></tr></thead><tbody>${items || `<tr><td colspan="3" class="hint">Not in any pairing yet</td></tr>`}</tbody></table></div></div>`;
 }
 
+function renderModal(){
+  const el = document.getElementById("modal"), p = ui.profile && players[ui.profile];
+  if (!p) { el.innerHTML = ""; el.hidden = true; return; }
+  const id = ui.profile, r = playerRecord(id), T = p.team;
+  el.hidden = false;
+  el.innerHTML = `<div class="modal" data-act="closeprofile"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pf-name">
+    <header style="background:var(--t${T.toLowerCase()})"><span style="font-weight:600;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;opacity:.85">${esc(teamName(T))}${p.captain ? " · Captain" : ""}</span>
+      <h2 id="pf-name">${esc(p.name)}</h2><button class="x" data-act="closeprofile" aria-label="Close">✕</button></header>
+    <div class="body">
+      ${p.bio ? `<div class="bio">${esc(p.bio)}</div>` : `<p class="hint">No profile written yet.</p>`}
+      <div class="stats"><div><b class="num">${fmtIndex(p.index)}</b>Index</div><div><b class="num">${r.W}-${r.H}-${r.L}</b>W-H-L</div><div><b class="num">${half(r.pts)}</b>Points</div><div><b class="num">${r.list.length}</b>Matches</div></div>
+      <div class="hint num">Course handicap: ${[1,2,3,4].map(n => `${esc(roundLabel(n))} <b>${fmtHcp(roundHcp(id, n))}</b>${hcpOverride(id, n) != null ? "*" : ""}`).join(" · ")}</div>
+      <div><button class="btn pri" data-act="player" data-id="${id}">Matches &amp; scorecards</button></div>
+    </div></div></div>`;
+}
+
 // ---------- shots calculator ----------
 function renderShots(){
-  const c = ui.calc, crs = course(c.course);
+  const c = ui.calc, rd = ev.rounds[c.round - 1], crs = roundCourse(rd);
   const opts = (sel, team) => `<option value="">Choose…</option>` + sortedPlayers(team).map(([id, p]) => `<option value="${id}" ${id === sel ? "selected" : ""}>${esc(p.name)} (${fmtIndex(p.index)})</option>`).join("");
   let out = "";
   const ids = [...c.a, ...c.b];
   if (ids.every(id => id && players[id])) {
-    const chA = c.a.map(id => courseHcp(players[id].index, crs)), chB = c.b.map(id => courseHcp(players[id].index, crs));
+    const chA = c.a.map(id => roundHcp(id, c.round)), chB = c.b.map(id => roundHcp(id, c.round));
     const r = shotsFor(c.format, chA, chB);
     const row = (label, ch, ph, sh, T) => `<tr><td style="border-left:4px solid var(--t${T})">${esc(label)}</td><td>${ch}</td><td>${fmtHcp(ph)}</td><td><b>${sh}</b></td><td style="text-align:left;white-space:normal">${strokeHoles(sh, crs).join(", ") || "–"}</td></tr>`;
     let rows = "";
@@ -572,18 +646,62 @@ function renderShots(){
     else ["a","b"].forEach(s => rows += row(c[s].map(pname).join(" / "), (s === "a" ? chA : chB).map(fmtHcp).join(" / "), r.ph[s][0], r.shots[s][0], s));
     out = `<div class="card"><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>${c.format === "fourball" ? "Player" : "Pair"}</th><th>CH</th><th>Playing</th><th>Shots</th><th style="text-align:left">Shot holes</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   } else out = `<div class="empty">Pick two players for each side to see playing handicaps, shots received and the holes they fall on.</div>`;
-  const all = sortedPlayers().map(([id, p]) => `<tr><td style="border-left:4px solid var(--t${p.team.toLowerCase()})">${esc(p.name)}</td><td>${fmtIndex(p.index)}</td>${COURSE_KEYS.map(k => { const ch = courseHcp(p.index, course(k)); return `<td>${fmtHcp(ch)}</td><td>${fmtHcp(Math.round(ch * ev.allow.fourball / 100))}</td>`; }).join("")}</tr>`).join("");
+  const all = sortedPlayers().map(([id, p]) => `<tr><td style="border-left:4px solid var(--t${p.team.toLowerCase()})">${esc(p.name)}</td><td>${fmtIndex(p.index)}</td>${[1,2,3,4].map(n => `<td>${fmtHcp(roundHcp(id, n))}${hcpOverride(id, n) != null ? "*" : ""}</td>`).join("")}</tr>`).join("");
   $app.innerHTML = `<h2 class="sec">Shots calculator</h2>
-    <p class="lead">Try any pairing in any format on either course. Allowances are ${ev.allow.fourball}% for fourball and ${ev.allow.chapLow}/${ev.allow.chapHigh} (Chapman) and ${ev.allow.greenLow}/${ev.allow.greenHigh} (Greensomes) low/high for the pairs formats.</p>
+    <p class="lead">Try any pairing in any format. Course handicaps come from the round you pick (its course and tees, or a handicap entered by hand in Setup). Allowances are ${ev.allow.fourball}% for fourball and ${ev.allow.chapLow}/${ev.allow.chapHigh} (Chapman) and ${ev.allow.greenLow}/${ev.allow.greenHigh} (Greensomes) low/high for the pairs formats.</p>
     <div class="form"><div class="fgrid">
       <label class="f">Format<select id="c-format">${Object.entries(FORMATS).map(([k, f]) => `<option value="${k}" ${k === c.format ? "selected" : ""}>${f.label}</option>`).join("")}</select></label>
-      <label class="f">Course<select id="c-course">${COURSE_KEYS.map(k => `<option value="${k}" ${k === c.course ? "selected" : ""}>${esc(course(k).name)}</option>`).join("")}</select></label>
+      <label class="f">Round (course &amp; tees)<select id="c-round">${[1,2,3,4].map(n => `<option value="${n}" ${n === c.round ? "selected" : ""}>${esc(roundLabel(n))} · ${esc(teeOf(ev.rounds[n-1]).name.split(" (")[0])}</option>`).join("")}</select></label>
       <label class="f">${esc(teamName("A"))} player 1<select id="c-a0">${opts(c.a[0], "A")}</select></label>
       <label class="f">${esc(teamName("A"))} player 2<select id="c-a1">${opts(c.a[1], "A")}</select></label>
       <label class="f">${esc(teamName("B"))} player 1<select id="c-b0">${opts(c.b[0], "B")}</select></label>
       <label class="f">${esc(teamName("B"))} player 2<select id="c-b1">${opts(c.b[1], "B")}</select></label>
     </div></div>${out}
-    ${all ? `<h2 class="sec">Everyone's handicaps</h2><div class="card"><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th><th>Index</th>${COURSE_KEYS.map(k => `<th>${esc(course(k).name)} CH</th><th>FB ${ev.allow.fourball}%</th>`).join("")}</tr></thead><tbody>${all}</tbody></table></div></div>` : ""}`;
+    ${all ? `<h2 class="sec">Course handicaps by round</h2><div class="card"><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th><th>Index</th>${[1,2,3,4].map(n => `<th>${esc(roundLabel(n))}</th>`).join("")}</tr></thead><tbody>${all}</tbody></table></div></div>` : ""}`;
+}
+
+// ---------- course tab ----------
+function fmtIdx1(n){ return n < 0 ? "+" + Math.abs(n).toFixed(1) : n.toFixed(1); }
+// Index ranges for each course handicap, laid out like the club's slope sheets.
+function chBands(c, t){
+  const out = []; let cur = null;
+  for (let i = -100; i <= 540; i++) {
+    const idx = i / 10, ch = calcHcp(idx, c, t);
+    if (cur && cur.ch === ch) cur.to = idx; else { cur = { ch, from: idx, to: idx }; out.push(cur); }
+  }
+  return out;
+}
+function ccRows(index){
+  if (index == null) return `<p class="hint">Type a handicap index to see the course handicap off every tee.</p>`;
+  return `<div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Course · tee</th><th>Course hcp</th><th>FB ${ev.allow.fourball}%</th><th>Rating / slope</th></tr></thead><tbody>` +
+    COURSE_KEYS.map(k => { const c = course(k); return c.tees.map(t => { const ch = calcHcp(index, c, t);
+      const used = ev.rounds.map((r, i) => r.course === k && teeOf(r).id === t.id ? "R" + (i + 1) : "").filter(Boolean).join(" ");
+      return `<tr><td>${esc(c.name)} · ${esc(teeShort(t))}${used ? ` <small class="hint">${used}</small>` : ""}</td><td><b>${fmtHcp(ch)}</b></td><td>${fmtHcp(Math.round(ch * ev.allow.fourball / 100))}</td><td class="hint">${t.rating} / ${t.slope}</td></tr>`; }).join(""); }).join("") +
+    `</tbody></table></div>`;
+}
+function renderCourse(){
+  ui.cc = ui.cc || { index: "" };
+  const courses = COURSE_KEYS.map(k => { const c = course(k);
+    const rounds = ev.rounds.map((r, i) => r.course === k ? `R${i+1} ${FORMATS[r.format].label} off ${teeShort(teeOf(r))}` : "").filter(Boolean).join(" · ");
+    const H = Array.from({ length: 18 }, (_, i) => i);
+    const seen = new Set(), teeRows = c.tees.filter(t => t.m && !seen.has(t.m.join()) && seen.add(t.m.join()));
+    const out = arr => sum(arr.slice(0, 9)), inn = arr => sum(arr.slice(9));
+    const row = (label, arr, cls) => `<tr class="${cls || ""}"><td>${label}</td>${H.slice(0, 9).map(i => `<td>${arr[i]}</td>`).join("")}<td class="tot">${cls === "si" ? "" : out(arr)}</td>${H.slice(9).map(i => `<td>${arr[i]}</td>`).join("")}<td class="tot">${cls === "si" ? "" : inn(arr)}</td><td class="tot">${cls === "si" ? "" : sum(arr)}</td></tr>`;
+    const card = `<div class="card"><div class="scroll"><table class="sc"><thead><tr><th>Hole</th>${H.slice(0, 9).map(i => `<th>${i+1}</th>`).join("")}<th class="tot">Out</th>${H.slice(9).map(i => `<th>${i+1}</th>`).join("")}<th class="tot">In</th><th class="tot">Tot</th></tr></thead><tbody>
+      ${teeRows.map(t => row(esc(t.id.replace("W", "")) + " <small class=\"hint\">m</small>", t.m, "tee")).join("")}
+      ${row("<b>Par</b>", c.par)}${row("<b>SI</b>", c.si, "si")}</tbody></table></div></div>`;
+    const tees = c.tees.map(t => `<details class="tee"><summary>${esc(t.name)}<span>Rating ${t.rating} · Slope ${t.slope} · Par ${sum(c.par)}</span></summary>
+      <p class="hint" style="margin:6px 0">Handicap index range → course handicap</p>
+      <div class="bands">${chBands(c, t).map(b => `<div><span>${b.from === b.to ? fmtIdx1(b.from) : `${fmtIdx1(b.from)} – ${fmtIdx1(b.to)}`}</span><b>${fmtHcp(b.ch)}</b></div>`).join("")}</div></details>`).join("");
+    return `<section class="round"><div class="rhead"><h2>${esc(c.name)} course</h2><span class="sub">${esc(rounds)}</span></div>
+      <div style="padding:12px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px"><b>Scorecard</b>${card}<b>Tees, ratings and handicap tables</b><div>${tees}</div></div></section>`;
+  }).join("");
+  $app.innerHTML = `<h2 class="sec">Courses &amp; handicaps</h2>
+    <div class="form"><h3>Handicap calculator</h3>
+      <label class="f">Handicap index (use + for plus handicaps)<input type="text" inputmode="decimal" id="cc-index" class="ccbig" value="${esc(ui.cc.index)}" placeholder="e.g. 14.2" autocomplete="off"></label>
+      <div id="cc-out">${ccRows(parseIndex(ui.cc.index))}</div>
+      <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), rounded. This is the method behind Camiral's slope sheets. Ratings, slopes, lengths, par and stroke index come from the club's official scorecards and slope sheets.</p></div>
+    ${courses}`;
 }
 
 // ---------- setup ----------
@@ -596,12 +714,16 @@ function renderSetup(){
   const disabled = noDb ? "disabled" : "";
   const courseForm = k => { const c = ev.courses[k];
     const holes = key => `<div class="holes">${c[key].map((v, i) => `<label class="hc">${i+1}<input type="number" inputmode="numeric" id="${k}-${key}-${i}" value="${v}" ${disabled}></label>`).join("")}</div>`;
-    return `<div class="fgrid">
-        <label class="f">Course name<input type="text" id="${k}-name" value="${esc(c.name)}" ${disabled}></label>
-        <label class="f">Tee<input type="text" id="${k}-tee" value="${esc(c.tee)}" ${disabled}></label>
-        <label class="f">Slope<input type="number" id="${k}-slope" value="${esc(c.slope)}" ${disabled}></label>
-        <label class="f">Course rating<input type="number" step="0.1" id="${k}-rating" value="${esc(c.rating)}" ${disabled}></label>
-      </div><b>Par</b>${holes("par")}<b>Stroke index</b>${holes("si")}`; };
+    const tees = c.tees.map((t, j) => `<tr><td><input type="text" id="${k}-tn-${j}" value="${esc(t.name)}" ${disabled} aria-label="Tee name"></td>
+        <td><input type="number" step="0.1" id="${k}-tr-${j}" value="${esc(t.rating)}" ${disabled} aria-label="Course rating"></td>
+        <td><input type="number" id="${k}-ts-${j}" value="${esc(t.slope)}" ${disabled} aria-label="Slope"></td></tr>`).join("");
+    return `<div class="fgrid"><label class="f">Course name<input type="text" id="${k}-name" value="${esc(c.name)}" ${disabled}></label></div>
+      <div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Tee</th><th>Course rating</th><th>Slope</th></tr></thead><tbody>${tees}</tbody></table></div>
+      <b>Par</b>${holes("par")}<b>Stroke index</b>${holes("si")}`; };
+  const teeOpts = (ck, sel) => course(ck).tees.map(t => `<option value="${esc(t.id)}" ${t.id === sel ? "selected" : ""}>${esc(teeShort(t))}</option>`).join("");
+  const hcpGrid = sortedPlayers().map(([id, p]) => `<tr><td style="border-left:4px solid var(--t${p.team.toLowerCase()})">${esc(p.name)} <small class="hint">${fmtIndex(p.index)}</small></td>${[1,2,3,4].map(n => {
+      const r = ev.rounds[n-1], calc = calcHcp(p.index, roundCourse(r), teeOf(r)), o = hcpOverride(id, n);
+      return `<td><input type="text" inputmode="numeric" id="ch-${id}-${n}" value="${o == null ? "" : fmtHcp(o)}" placeholder="${fmtHcp(calc)}" ${disabled} aria-label="${esc(p.name)} ${esc(roundLabel(n))}" style="width:4.5em;text-align:center"></td>`; }).join("")}</tr>`).join("");
   const pairOpts = (sel, team) => `<option value="">–</option>` + sortedPlayers(team).map(([id, p]) => `<option value="${id}" ${id === sel ? "selected" : ""}>${esc(p.name)}</option>`).join("");
   const pairings = ev.rounds.map((r, i) => `<div><b>Round ${i+1} · ${FORMATS[r.format].label}</b> <span class="hint">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)}</span>` + matchIds(i+1).map(mid => {
     const m = matches[mid] || {}; const a = m.a || [], b = m.b || [];
@@ -614,6 +736,7 @@ function renderSetup(){
       <input type="text" id="pn-${id}" value="${esc(p.name)}" ${disabled} aria-label="Name">
       <select id="pt-${id}" ${disabled} aria-label="Team"><option value="A" ${p.team === "A" ? "selected" : ""}>${esc(teamName("A"))}</option><option value="B" ${p.team === "B" ? "selected" : ""}>${esc(teamName("B"))}</option></select>
       <input type="text" inputmode="decimal" id="pi-${id}" value="${p.index == null ? "" : fmtIndex(p.index)}" ${disabled} aria-label="Handicap index">
+      <label style="display:flex;align-items:center;gap:4px;font-size:.8rem"><input type="checkbox" id="pc-${id}" ${p.captain ? "checked" : ""} ${disabled}>Capt</label>
       <button class="btn danger" data-act="delplayer" data-id="${id}" aria-label="Remove ${esc(p.name)}">✕</button></div>`).join("");
   const counts = { A: sortedPlayers("A").length, B: sortedPlayers("B").length };
 
@@ -627,16 +750,17 @@ function renderSetup(){
       <label class="f">Team 2 name<input type="text" id="e-tb" value="${esc(ev.teams.B.name)}" ${disabled}></label>
       <label class="f">Team 2 colour<input type="color" id="e-cb" value="${esc(ev.teams.B.color)}" ${disabled}></label>
     </div>
-    <h3>Rounds</h3>${ev.rounds.map((r, i) => `<div class="fgrid">
+    <h3>Rounds</h3><p class="hint">Pick the tees for each round on the day. Everyone's course handicap and shots update when you save.</p>${ev.rounds.map((r, i) => `<div class="fgrid">
       <label class="f">R${i+1} day<input type="text" id="r-day-${i}" value="${esc(r.day)}" ${disabled}></label>
       <label class="f">Session<input type="text" id="r-ses-${i}" value="${esc(r.session)}" ${disabled}></label>
       <label class="f">Format<select id="r-fmt-${i}" ${disabled}>${Object.entries(FORMATS).map(([k, f]) => `<option value="${k}" ${k === r.format ? "selected" : ""}>${f.label}</option>`).join("")}</select></label>
       <label class="f">Course<select id="r-crs-${i}" ${disabled}>${COURSE_KEYS.map(k => `<option value="${k}" ${k === r.course ? "selected" : ""}>${esc(course(k).name)}</option>`).join("")}</select></label>
+      <label class="f">Tees<select id="r-tee-${i}" ${disabled}>${teeOpts(r.course, teeOf(r).id)}</select></label>
       <label class="f">Points per match<input type="number" step="0.5" min="0.5" id="r-pts-${i}" value="${r.points}" ${disabled}></label></div>`).join("")}
     <div><button class="btn pri" data-act="saveevent">Save event</button></div></section>
 
     <section class="form"><h3>Courses</h3>
-      <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par). Loaded with the men's yellow tee ratings for both Camiral courses; change the tee, slope and rating if you're playing different tees.</p>
+      <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), the same formula as the club's slope tables. Ratings, slopes, par and stroke index are from Camiral's official scorecards and slope sheets.</p>
       ${COURSE_KEYS.map(courseForm).join("<hr style='border:0;border-top:1px solid var(--line);width:100%'>")}
       <h3>Handicap allowances</h3><div class="fgrid">
         <label class="f">Fourball %<input type="number" id="a-fb" value="${ev.allow.fourball}" ${disabled}></label>
@@ -649,20 +773,30 @@ function renderSetup(){
       <div><button class="btn pri" data-act="savecourse">Save courses</button></div></section>
 
     <section class="form"><h3>Players <span class="hint">${esc(teamName("A"))} ${counts.A}/8 · ${esc(teamName("B"))} ${counts.B}/8</span></h3>
-      ${plist ? `<div class="prow hint"><span>Name</span><span>Team</span><span>Index</span><span></span></div>${plist}<div><button class="btn pri" data-act="saveplayers">Save player changes</button></div>` : `<p class="hint">No players yet.</p>`}
-      <label class="f">Add players in bulk: one per line as <i>Name, Team, Index</i>. Team is 1, 2 or the team name. Use + for plus handicaps.
+      ${plist ? `<div class="prow hint"><span>Name</span><span>Team</span><span>Index</span><span>Captain</span><span></span></div>${plist}<div><button class="btn pri" data-act="saveplayers">Save player changes</button></div>` : `<p class="hint">No players yet.</p>`}
+      <label class="f">Add players in bulk: one per line as <i>Name, Team, Index</i>, adding <i>, C</i> for a captain. Team is 1, 2 or the team name. Use + for plus handicaps.
         <textarea id="bulk" placeholder="Sam Carter, Crows, 12.4&#10;Alex Moore, Crows, +1.2&#10;Jo Patel, Smugglers, 18.0"></textarea></label>
       <p class="hint">A name that already exists updates that player's team and index.</p>
       <div><button class="btn pri" data-act="bulkadd">Add players</button></div></section>
+
+    <section class="form"><h3>Player profiles</h3>
+      <p class="hint">The blurb shown when someone taps a player on the Players tab.</p>
+      ${sortedPlayers().map(([id, p]) => `<label class="f">${esc(p.name)}${captBadge(p)}<textarea id="bio-${id}" rows="3" style="min-height:70px;font-family:var(--body)" ${disabled}>${esc(p.bio || "")}</textarea></label>`).join("") || `<p class="hint">Add players first.</p>`}
+      ${Object.keys(players).length ? `<div><button class="btn pri" data-act="savebios">Save profiles</button></div>` : ""}</section>
+
+    <section class="form"><h3>Course handicaps</h3>
+      <p class="hint">Grey numbers are calculated from each player's index and the round's tees. To use a different figure (from the club's slope table or a player's app), type it in; use + for plus handicaps. Clear a box to go back to the calculated figure.</p>
+      ${hcpGrid ? `<div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th>${[1,2,3,4].map(n => `<th>${esc(roundLabel(n))}<br><small class="hint">Tee ${esc(teeOf(ev.rounds[n-1]).name.split(" (")[0])}</small></th>`).join("")}</tr></thead><tbody>${hcpGrid}</tbody></table></div>
+      <div><button class="btn pri" data-act="savehcps">Save course handicaps</button></div>` : `<p class="hint">Add players first.</p>`}</section>
 
     <section class="form"><h3>Pairings</h3><p class="hint">Pick two players per side for each match. Shots shown update as you pick.</p>
       ${pairings}<div><button class="btn pri" data-act="savepairs">Save pairings</button></div></section>`;
 }
 function pairPreview(mid, a, b){
-  const r0 = ev.rounds[roundOf(mid) - 1], crs = roundCourse(r0);
+  const r0 = ev.rounds[roundOf(mid) - 1];
   if (!(a.length === 2 && b.length === 2 && [...a, ...b].every(id => id && players[id]))) return "Pick 4 players to see shots.";
   if (new Set([...a, ...b]).size < 4) return "A player is picked twice.";
-  const r = shotsFor(r0.format, a.map(id => courseHcp(players[id].index, crs)), b.map(id => courseHcp(players[id].index, crs)));
+  const n = roundOf(mid), r = shotsFor(r0.format, a.map(id => roundHcp(id, n)), b.map(id => roundHcp(id, n)));
   if (r0.format === "fourball") return "Shots: " + [...a.map((id, i) => `${esc(pname(id))} ${r.shots.a[i]}`), ...b.map((id, i) => `${esc(pname(id))} ${r.shots.b[i]}`)].join(" · ");
   return `Shots: ${esc(teamName("A"))} ${r.shots.a[0]} · ${esc(teamName("B"))} ${r.shots.b[0]}`;
 }
@@ -673,7 +807,7 @@ async function saveEvent(){
   e.name = val("e-name").trim() || "Blacklock XI";
   e.venue = val("e-venue").trim();
   e.teams.A = { name: val("e-ta").trim() || "Team 1", color: val("e-ca") }; e.teams.B = { name: val("e-tb").trim() || "Team 2", color: val("e-cb") };
-  e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1 }));
+  e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), tee: val(`r-tee-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1 }));
   await writeEvent(e, "Event saved");
 }
 async function saveCourse(){
@@ -683,10 +817,32 @@ async function saveCourse(){
     const par = [], si = [];
     for (let i = 0; i < 18; i++) { par.push(parseInt(val(`${k}-par-${i}`)) || 4); si.push(parseInt(val(`${k}-si-${i}`)) || i + 1); }
     if ([...si].sort((x, y) => x - y).some((v, i) => v !== i + 1)) { toast(`${ev.courses[k].name}: stroke index must use each number 1–18 once.`); return; }
-    e.courses[k] = { name: val(`${k}-name`).trim() || ev.courses[k].name, tee: val(`${k}-tee`).trim(), slope: val(`${k}-slope`), rating: val(`${k}-rating`), par, si };
+    const tees = ev.courses[k].tees.map((t, j) => ({ ...t, name: val(`${k}-tn-${j}`).trim() || t.name, rating: parseFloat(val(`${k}-tr-${j}`)), slope: parseFloat(val(`${k}-ts-${j}`)) }));
+    if (tees.some(t => !isFinite(t.rating) || !(t.slope >= 55 && t.slope <= 155))) { toast(`${ev.courses[k].name}: every tee needs a course rating and a slope between 55 and 155.`); return; }
+    e.courses[k] = { name: val(`${k}-name`).trim() || ev.courses[k].name, tees, par, si };
   }
   e.allow = { fourball: +val("a-fb") || 90, chapLow: +val("a-cl") || 60, chapHigh: +val("a-ch") || 40, greenLow: +val("a-gl") || 60, greenHigh: +val("a-gh") || 40 };
   await writeEvent(e, "Courses saved");
+}
+async function saveBios(){
+  if (blocked()) return;
+  const batch = fs.batch(); let n = 0;
+  for (const [id, p] of Object.entries(players)) { const bio = val("bio-" + id).trim(); if (bio !== (p.bio || "")) { batch.update(fs.doc("players/" + id), { bio }); n++; } }
+  if (!n) { toast("No changes to save"); return; }
+  try { await batch.commit(); toast(`Saved ${n} profile${n > 1 ? "s" : ""}`); render(true); } catch (e) { onWriteError(e); }
+}
+async function saveHcps(){
+  if (blocked()) return;
+  const batch = fs.batch(); let n = 0, bad = null;
+  for (const [id, p] of Object.entries(players)) {
+    const ch = {};
+    for (let r = 1; r <= 4; r++) { const raw = val(`ch-${id}-${r}`).trim(); if (raw === "") { ch["r" + r] = null; continue; }
+      const v = parseIndex(raw); if (v == null) { bad = `${p.name} ${roundLabel(r)}`; continue; } ch["r" + r] = Math.round(v); }
+    if (JSON.stringify(ch) !== JSON.stringify(Object.assign({ r1: null, r2: null, r3: null, r4: null }, p.ch || {}))) { batch.update(fs.doc("players/" + id), { ch }); n++; }
+  }
+  if (bad) { toast(`Couldn't read the handicap for ${bad}.`); return; }
+  if (!n) { toast("No changes to save"); return; }
+  try { await batch.commit(); toast(`Saved course handicaps for ${n} player${n > 1 ? "s" : ""}`); render(true); } catch (e) { onWriteError(e); }
 }
 async function writeEvent(e, msg){
   try { await fs.doc("event/main").set(e); ev = mergeEvent(e); applyTeamColors(); toast(msg); render(true); } catch (err) { onWriteError(err); }
@@ -707,10 +863,11 @@ async function bulkAdd(){
     if (!name || !team) { bad.push(line); continue; }
     const existing = Object.entries(players).find(([, p]) => p.name.toLowerCase() === name.toLowerCase());
     const id = existing ? existing[0] : "p" + Math.random().toString(36).slice(2, 9);
-    ops.push([id, { name, team, index }]);
+    const d = { name, team, index }; if (/^c(apt(ain)?)?$/i.test(parts[3] || "")) d.captain = true;
+    ops.push([id, d]);
   }
   if (!ops.length) { toast(bad.length ? `Couldn't read: ${bad[0]}` : "Nothing to add."); return; }
-  try { const batch = fs.batch(); ops.forEach(([id, d]) => batch.set(fs.doc("players/" + id), d)); await batch.commit();
+  try { const batch = fs.batch(); ops.forEach(([id, d]) => batch.set(fs.doc("players/" + id), d, { merge: true })); await batch.commit();
     toast(`Saved ${ops.length} player${ops.length > 1 ? "s" : ""}${bad.length ? `, skipped ${bad.length}` : ""}`); render(true); }
   catch (e) { onWriteError(e); }
 }
@@ -718,8 +875,8 @@ async function savePlayers(){
   if (blocked()) return;
   const batch = fs.batch(); let n = 0;
   for (const [id, p] of Object.entries(players)) {
-    const d = { name: val("pn-" + id).trim() || p.name, team: val("pt-" + id) || p.team, index: parseIndex(val("pi-" + id)) };
-    if (d.name !== p.name || d.team !== p.team || d.index !== p.index) { batch.set(fs.doc("players/" + id), d); n++; }
+    const d = { name: val("pn-" + id).trim() || p.name, team: val("pt-" + id) || p.team, index: parseIndex(val("pi-" + id)), captain: !!document.getElementById("pc-" + id)?.checked };
+    if (d.name !== p.name || d.team !== p.team || d.index !== p.index || d.captain !== !!p.captain) { batch.update(fs.doc("players/" + id), d); n++; }
   }
   if (!n) { toast("No changes to save"); return; }
   try { await batch.commit(); toast(`Updated ${n} player${n > 1 ? "s" : ""}`); render(true); } catch (e) { onWriteError(e); }
@@ -753,12 +910,15 @@ async function savePairs(){
 function render(force){
   applyTeamColors();
   renderHeader();
+  renderModal();
+  if (ui.tab === "course" && !force && $app.dataset.view === "course") return;
   if (ui.tab === "setup" && !force && $app.dataset.view === "setup" && setupDirty) return; // don't wipe half-typed setup forms on live updates
   $app.dataset.view = ui.tab;
   setupDirty = false;
   if (ui.tab === "board") ui.match ? renderMatch() : renderBoard();
   else if (ui.tab === "players") renderPlayers();
   else if (ui.tab === "shots") renderShots();
+  else if (ui.tab === "course") renderCourse();
   else renderSetup();
 }
 document.addEventListener("click", e => {
@@ -768,7 +928,10 @@ document.addEventListener("click", e => {
     case "tab": ui.tab = el.dataset.tab; if (ui.tab === "board") ui.match = null; if (ui.tab === "players") ui.player = null; saveUi(); render(true); scrollTo(0, 0); break;
     case "open": ui.tab = "board"; ui.match = el.dataset.id; ui.hole = firstOpenHole(getMatch(ui.match)); saveUi(); render(true); scrollTo(0, 0); break;
     case "close": ui.match = null; saveUi(); render(true); break;
-    case "player": ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
+    case "player": ui.profile = null; ui.tab = "players"; ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
+    case "profile": ui.profile = el.dataset.id; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
+    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; renderModal(); } break;
+    case "savebios": saveBios(); break;
     case "hole": { const h = +el.dataset.h; if (h >= 1 && h <= 18) { ui.hole = h; render(); } break; }
     case "inc": case "dec": case "pu": {
       const k = el.dataset.k, cur = (m.scores[ui.hole] || {})[k], par = m.c.par[ui.hole - 1];
@@ -782,6 +945,8 @@ document.addEventListener("click", e => {
     case "unlock": if (val("pin") === String(CFG.setupPin)) { ui.unlocked = true; saveUi(); render(true); } else toast("That PIN isn't right."); break;
     case "lock": ui.unlocked = false; saveUi(); render(true); toast("Setup locked on this phone"); break;
     case "saveevent": saveEvent(); break;
+    case "savehcps": saveHcps(); break;
+    case "refreshhcp": if (!blocked()) fs.doc("matches/" + ui.match).update({ hcp: null }).then(() => toast("Match now uses the new handicaps"), onWriteError); break;
     case "savecourse": saveCourse(); break;
     case "bulkadd": bulkAdd(); break;
     case "saveplayers": savePlayers(); break;
@@ -790,14 +955,19 @@ document.addEventListener("click", e => {
   }
 });
 let setupDirty = false;
+document.addEventListener("input", e => { if (e.target.id === "cc-index") { ui.cc = { index: e.target.value }; saveUi(); document.getElementById("cc-out").innerHTML = ccRows(parseIndex(e.target.value)); } });
 document.addEventListener("input", e => { if (ui.tab === "setup" && e.target.closest("main")) setupDirty = true; });
 document.addEventListener("change", e => {
   const t = e.target;
   if (ui.tab === "setup" && t.closest("main")) setupDirty = true;
   if (t.id && t.id.startsWith("c-") && ui.tab === "shots") {
     const c = ui.calc;
-    if (t.id === "c-format") c.format = t.value; else if (t.id === "c-course") c.course = t.value; else { const s = t.id[2], i = +t.id[3]; c[s][i] = t.value; }
+    if (t.id === "c-format") c.format = t.value; else if (t.id === "c-round") c.round = +t.value; else { const s = t.id[2], i = +t.id[3]; c[s][i] = t.value; }
     saveUi(); render(true);
+  }
+  if (t.id && t.id.startsWith("r-crs-")) {
+    const i = t.id.slice(6), sel = document.getElementById("r-tee-" + i), c = course(t.value);
+    sel.innerHTML = c.tees.map(x => `<option value="${esc(x.id)}" ${x === defTee(c) ? "selected" : ""}>${esc(teeShort(x))}</option>`).join("");
   }
   if (t.dataset.mid && ui.tab === "setup") {
     const mid = t.dataset.mid;
@@ -805,10 +975,11 @@ document.addEventListener("change", e => {
     document.getElementById("prev-" + mid).innerHTML = pairPreview(mid, a, b);
   }
 });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && ui.profile) { ui.profile = null; renderModal(); } });
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "pin") document.querySelector('[data-act="unlock"]')?.click(); });
 
 // ---------- boot ----------
-if (!["board","players","shots","setup"].includes(ui.tab)) ui.tab = "board";
+if (!["board","players","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
 if (ui.match && !/^r[1-4]m[1-4]$/.test(ui.match)) ui.match = null;
 if (ui.match) ui.hole = 1;
 render(true);
