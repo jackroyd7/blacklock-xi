@@ -58,3 +58,6 @@ Anyone who has the link can enter or change scores, which is the point. Don't po
 - **Full backup (JSON):** everything in one file. **Restore from backup** puts it all back, replacing what's there.
 
 Every row carries the event name and year (set in Event & teams), so files from different years can be stacked in one spreadsheet.
+
+## Releasing changes
+Bump `BUILD` near the top of the script in `index.html` (e.g. `2026-10-13.2` → `2026-10-13.3`) in every commit that changes the app. Open copies check for a new `BUILD` every few minutes and whenever the app comes back on screen, and show an **Update** bar. The address never changes.

@@ -193,6 +193,7 @@ textarea{min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:
 .prow{display:grid;grid-template-columns:1fr 110px 72px 58px auto;gap:6px;align-items:center}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .hint{font-size:.8rem;color:var(--muted);margin:0}
+.update{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:45;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ink);color:var(--bg);padding:10px 12px 10px 16px;border-radius:12px;font-size:.88rem;font-weight:600;max-width:520px;margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.88rem;font-weight:600;z-index:50;max-width:calc(100% - 32px)}
 .capt{display:inline-block;margin-left:6px;padding:0 5px;border-radius:4px;font-size:.68rem;font-weight:800;letter-spacing:.04em;color:var(--on-team);vertical-align:2px}
 .modal{position:fixed;inset:0;z-index:40;background:rgba(10,16,12,.55);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -234,6 +235,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <header class="top"><div class="wrap" id="hdr"></div></header>
 <main class="wrap" id="app"><div class="empty">Loading the scoreboard…</div></main>
 <div class="toast" id="toast" hidden></div>
+<div class="update" id="update" hidden><span>A new version of the scoreboard is available.</span><button class="btn pri" data-act="update">Update</button></div>
 <div id="modal"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -241,6 +243,8 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script src="config.js"></script>
 <script>
 (() => {
+// Changed on every release so open copies can tell a newer version has been published.
+const BUILD = "2026-10-13.2";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -1184,6 +1188,7 @@ document.addEventListener("click", e => {
     case "quick": { const cur = (m.scores[ui.hole] || {}).w; queueScore(ui.match, String(ui.hole), "w", cur === el.dataset.w ? null : el.dataset.w); break; }
     case "unlock": pinMatches(val("pin")).then(ok => { if (ok) { ui.unlocked = true; saveUi(); render(true); } else toast("That PIN isn't right."); }); break;
     case "lock": ui.unlocked = false; saveUi(); render(true); toast("Setup locked on this phone"); break;
+    case "update": location.replace(location.pathname + "?u=" + Date.now()); break;
     case "saveevent": saveEvent(); break;
     case "savehcps": saveHcps(); break;
     case "refreshhcp": if (!blocked()) fs.doc("matches/" + ui.match).update({ hcp: null }).then(() => toast("Match now uses the new handicaps"), onWriteError); break;
@@ -1232,6 +1237,20 @@ if (!["board","players","shots","course","setup"].includes(ui.tab)) ui.tab = "bo
 if (ui.match && !/^r[1-4]m[1-4]$/.test(ui.match)) ui.match = null;
 if (ui.match) ui.hole = 1;
 render(true);
+
+// ---------- updates ----------
+// GitHub Pages lets browsers reuse a saved copy for up to 10 minutes, so check for a newer release ourselves.
+if (location.search) history.replaceState(null, "", location.pathname + location.hash);
+async function checkForUpdate(){
+  try {
+    const txt = await (await fetch(location.pathname + "?build=" + Date.now(), { cache: "no-store" })).text();
+    const m = txt.match(/const BUILD = "([^"]+)"/);
+    if (m && m[1] !== BUILD) document.getElementById("update").hidden = false;
+  } catch {}
+}
+setTimeout(checkForUpdate, 4000);
+setInterval(checkForUpdate, 5 * 60 * 1000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(); });
 
 try {
   if (!window.firebase || !CFG.firebase || !CFG.firebase.projectId) throw new Error("Firebase not configured");
