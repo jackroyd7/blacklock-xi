@@ -193,6 +193,8 @@ textarea{min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:
 .prow{display:grid;grid-template-columns:1fr 110px 72px 58px auto;gap:6px;align-items:center}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .hint{font-size:.8rem;color:var(--muted);margin:0}
+.net{font-size:.78rem;font-weight:600;padding:5px 10px;border-radius:8px;background:var(--surface2);color:var(--muted)}
+.net.off{background:var(--warn-bg);color:var(--ink);border:1px solid var(--warn)}
 .update{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:45;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ink);color:var(--bg);padding:10px 12px 10px 16px;border-radius:12px;font-size:.88rem;font-weight:600;max-width:520px;margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.88rem;font-weight:600;z-index:50;max-width:calc(100% - 32px)}
 .capt{display:inline-block;margin-left:6px;padding:0 5px;border-radius:4px;font-size:.68rem;font-weight:800;letter-spacing:.04em;color:var(--on-team);vertical-align:2px}
@@ -247,7 +249,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-13.3";
+const BUILD = "2026-10-13.4";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -301,6 +303,9 @@ let fs = null, noDb = false;
 let ev = clone(DEFAULT_EVENT), players = {}, matches = {};
 const loaded = { ev: false, p: false, m: false };
 const pending = {}, inflight = {}, timers = {};
+const net = { online: navigator.onLine, fromCache: false, waiting: 0 };
+addEventListener("online", () => { net.online = true; renderHeader(); });
+addEventListener("offline", () => { net.online = false; renderHeader(); });
 const ui = Object.assign({ tab: "board", match: null, hole: 1, player: null, unlocked: false,
   calc: { format: "fourball", round: 1, a: ["", ""], b: ["", ""] } }, loadUi());
 if (!(ui.calc.round >= 1 && ui.calc.round <= 4)) ui.calc.round = 1;
@@ -506,19 +511,32 @@ function queueScore(mid, h, key, val){
   render();
   clearTimeout(timers[mid]); timers[mid] = setTimeout(() => flush(mid), 450);
 }
-async function flush(mid){
-  if (inflight[mid] || !pending[mid]) { if (pending[mid]) timers[mid] = setTimeout(() => flush(mid), 300); return; }
-  const scores = pending[mid]; delete pending[mid]; inflight[mid] = scores;
+// Scores go to Firestore straight away. Offline, Firestore stores them on the phone (persistence is on)
+// and sends them when signal returns, even if the app was closed in between.
+function flush(mid){
+  clearTimeout(timers[mid]);
+  const scores = pending[mid]; if (!scores) return;
   const FP = firebase.firestore.FieldPath, args = [];
   for (const h in scores) for (const k in scores[h]) args.push(new FP("scores", h, k), scores[h][k]);
   const base = matches[mid] || {}, m = getMatch(mid);
   if (!base.hcp && m.ready) { const hcp = {}; [...m.a, ...m.b].forEach(id => hcp[id] = roundHcp(id, m.round)); args.push("hcp", hcp); }
-  try { await fs.doc("matches/" + mid).update(...args); }
-  catch (e) { onWriteError(e); }
-  finally { delete inflight[mid]; render(); }
+  delete pending[mid];
+  inflight[mid] = Object.assign(inflight[mid] || {}, scores); // shown until the local snapshot catches up
+  fs.doc("matches/" + mid).update(...args).catch(onWriteError);
 }
+function flushAll(){ Object.keys(pending).forEach(flush); }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
+window.addEventListener("pagehide", flushAll);
 
 // ---------- header ----------
+function netNote(){
+  if (noDb) return "";
+  const off = !net.online || net.fromCache, w = net.waiting;
+  const waitTxt = w ? `${w} match${w > 1 ? "es" : ""} with scores waiting to send` : "";
+  if (off) return `<div class="net off">Offline · ${w ? `${waitTxt}. They're saved on this phone and will send when you have signal.` : "showing the last scores received."}</div>`;
+  if (w) return `<div class="net">Sending scores…</div>`;
+  return "";
+}
 function renderHeader(){
   const t = totals();
   const pct = v => (v / t.total * 100).toFixed(2) + "%";
@@ -526,6 +544,7 @@ function renderHeader(){
   const tab = (id, label) => `<button data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${label}</button>`;
   $hdr.innerHTML = `
     <div class="evline"><span class="evname">${esc(ev.name)}<small>${esc(ev.venue)}</small></span><span class="evmeta">${t.live ? '<span class="live-dot"></span>Live · ' : ""}${t.total} pts · ${status}</span></div>
+    ${netNote()}
     <div class="board" data-act="scores" role="button" tabindex="0" aria-label="Show the score for each round">
       <div class="side a"><span class="tname">${esc(teamName("A"))}<span class="proj">Projected ${half(t.A.proj)}</span></span><span class="big">${half(t.A.won)}</span></div>
       <div class="side b"><span class="big">${half(t.B.won)}</span><span class="tname">${esc(teamName("B"))}<span class="proj">Projected ${half(t.B.proj)}</span></span></div>
@@ -1266,9 +1285,14 @@ try {
   if (!window.firebase || !CFG.firebase || !CFG.firebase.projectId) throw new Error("Firebase not configured");
   firebase.initializeApp(CFG.firebase);
   fs = firebase.firestore();
+  fs.enablePersistence({ synchronizeTabs: true }).catch(e => console.warn("Offline storage unavailable:", e.code));
   fs.doc("event/main").onSnapshot(s => { ev = mergeEvent(s.exists ? s.data() : null); loaded.ev = true; render(); }, err => console.error(err));
   fs.collection("players").onSnapshot(s => { players = {}; s.docs.forEach(d => players[d.id] = d.data()); loaded.p = true; render(); }, err => console.error(err));
-  fs.collection("matches").onSnapshot(s => { matches = {}; s.docs.forEach(d => matches[d.id] = d.data());
+  fs.collection("matches").onSnapshot({ includeMetadataChanges: true }, s => {
+    matches = {}; s.docs.forEach(d => matches[d.id] = d.data());
+    for (const k in inflight) delete inflight[k]; // the snapshot now includes this phone's own writes
+    net.waiting = s.docs.filter(d => d.metadata.hasPendingWrites).length;
+    net.fromCache = s.metadata.fromCache;
     if (!loaded.m && ui.match) ui.hole = firstOpenHole(getMatch(ui.match));
     loaded.m = true; render(); }, err => console.error(err));
 } catch (e) { console.warn(e.message); noDb = true; render(true); }
