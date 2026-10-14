@@ -235,6 +235,8 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .hmmap .tiles img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;-webkit-user-drag:none}
 .hmmap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .hmmap .lbl{font:700 13px var(--body);fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:3px}
+.hmmap .lbl.tg{fill:#ffd54a;font-size:14px;stroke:rgba(0,0,0,.9);stroke-width:3.5px}
+.hm .tg{color:#ffd54a}
 .hmmap .attr{position:absolute;right:4px;bottom:2px;font-size:.6rem;opacity:.7;pointer-events:none}
 .hmmap .none{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:24px;color:#cfd8d2;gap:8px}
 .hm .hmbot{display:grid;gap:6px;padding:8px 10px 10px;background:rgba(0,0,0,.85);font-size:.85rem}
@@ -308,7 +310,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.2";
+const BUILD = "2026-10-14.3";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -1014,7 +1016,7 @@ function hmDraw(){
 function hmOverlay(){
   const svg = document.getElementById("hmsvg"), v = hm.view; if (!svg || !v) return;
   const g = v.g, S = v.toScreen, u = unitLabel();
-  const lbl = (p, txt, dx = 9, dy = 4, anchor = "start") => `<text class="lbl" x="${p[0] + dx}" y="${p[1] + dy}" text-anchor="${anchor}">${txt}</text>`;
+  const lbl = (p, txt, dx = 9, dy = 4, anchor = "start", cls = "") => `<text class="lbl ${cls}" x="${p[0] + dx}" y="${p[1] + dy}" text-anchor="${anchor}">${txt}</text>`;
   const line = (a, b, attrs) => `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" ${attrs}/>`;
   const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   const route = [g.t, g.d, g.g].filter(Boolean);
@@ -1048,7 +1050,7 @@ function hmOverlay(){
     const from = me && nearGreen(g) ? gps.pos : g.t, a = S(from), p = S(hm.target);
     out += line(a, p, `stroke="#ffd54a" stroke-width="2.5"`) + line(p, gg, `stroke="#ffd54a" stroke-width="2" stroke-dasharray="5 5"`);
     out += `<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="none" stroke="#ffd54a" stroke-width="2.5"/><circle cx="${p[0]}" cy="${p[1]}" r="2.5" fill="#ffd54a"/>`;
-    out += lbl(mid(a, p), `${D(metres(from, hm.target))} ${u}`) + lbl(mid(p, gg), `${D(metres(hm.target, g.g))} ${u}`);
+    out += lbl(mid(a, p), `${D(metres(from, hm.target))} ${u}`, 9, 4, "start", "tg") + lbl(mid(p, gg), `${D(metres(hm.target, g.g))} ${u}`, 9, 4, "start", "tg");
   }
   svg.innerHTML = out;
 }
@@ -1066,7 +1068,7 @@ function hmBottom(){
   html += `<div class="row" style="justify-content:space-between"><span style="flex:1;min-width:0;opacity:.85">${esc(status)}</span>
     <button class="rb${ui.gps ? " on" : ""}" data-act="${ui.gps ? "gpsoff" : "gpson"}">GPS ${ui.gps ? "on" : "off"}</button></div>`;
   html += hm.target
-    ? `<div class="row" style="justify-content:space-between"><span>Target: <b>${D(metres(near ? from : g.t, hm.target))} ${u}</b> from ${near ? "you" : "the tee"}, <b>${D(metres(hm.target, g.g))} ${u}</b> to the middle</span><button class="rb" data-act="hmclear">Clear</button></div>`
+    ? `<div class="row" style="justify-content:space-between"><span>Target: <b class="tg">${D(metres(near ? from : g.t, hm.target))} ${u}</b> from ${near ? "you" : "the tee"}, <b class="tg">${D(metres(hm.target, g.g))} ${u}</b> to the middle</span><button class="rb" data-act="hmclear">Clear</button></div>`
     : `<span style="opacity:.7">Tap the photo to measure to any point. Dots mark 100, 150, 200 and 250 ${u} to the middle of the green.</span>`;
   el.innerHTML = html;
 }
