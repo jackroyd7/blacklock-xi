@@ -308,7 +308,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.1";
+const BUILD = "2026-10-14.2";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -616,7 +616,7 @@ function renderHeader(){
       <i style="right:0;width:${pct(t.B.won)};background:var(--tb)"></i>
       <i class="mid"></i>
     </div>
-    <nav class="tabs">${tab("board","Scoreboard")}${tab("players","Players")}${tab("stats","Stats")}${tab("shots","Shots")}${tab("course","Course")}${tab("setup","Setup")}</nav>`;
+    <nav class="tabs">${tab("board","Scoreboard")}${tab("live","Live")}${tab("players","Players")}${tab("stats","Stats")}${tab("shots","Shots")}${tab("course","Course")}${tab("setup","Setup")}</nav>`;
 }
 
 // ---------- scoreboard ----------
@@ -642,7 +642,6 @@ function renderBoard(){
   let html = "";
   if (noDb) html += `<div class="notice"><b>Not connected.</b> Scores can't load until the Firebase settings are added to <code>config.js</code>. See the README.</div>`;
   if (!noDb && loaded.p && !Object.keys(players).length) html += `<div class="empty">No players yet. Add both teams and their handicaps in <b>Setup</b>, then set the pairings for each round. Matches appear here as soon as pairings are saved.</div>`;
-  html += renderFeed();
   ev.rounds.forEach((r, i) => {
     const rt = t.rounds[i];
     html += `<section class="round"><div class="rhead"><h2>R${i+1} · ${FORMATS[r.format].label}</h2>
@@ -668,7 +667,7 @@ function firstOpenHole(m){ for (let h = 1; h <= 18; h++) if (!holeResult(m, h)) 
 function renderMatch(){
   const m = getMatch(ui.match), st = matchState(m), p = pillText(st);
   const col = st.leader ? (st.leader === "A" ? "var(--ta)" : "var(--tb)") : "var(--ink)";
-  let html = `<div class="mhead"><button class="back" data-act="close">‹ Scoreboard</button>
+  let html = `<div class="mhead"><button class="back" data-act="close">‹ ${ui.backTo === "live" ? "Live" : "Scoreboard"}</button>
     <h1 class="mtitle">Round ${m.round} · ${FORMATS[m.format].label} · Match ${m.slot}</h1>
     <p class="hint">${esc(m.r.day)} ${esc(m.r.session)} · ${esc(m.c.name)} course, tee ${esc(teeShort(m.tee))}${m.tee.m ? ` (${teeLength(m.tee)})` : ""} · worth ${m.r.points} pt${m.r.points > 1 ? "s" : ""}. ${FORMATS[m.format].note}</p>
     <div class="banner">${pairCell(m, "a", st)}<div class="pill${st.status === "final" ? " fin" : ""}" style="color:${col}">${esc(p.main)}<small>${esc(p.sub)}</small></div>${pairCell(m, "b", st)}</div></div>`;
@@ -1252,8 +1251,9 @@ function agoTxt(t){
   return dt.toDateString() === new Date().toDateString() ? clock : `${dt.toLocaleDateString("en-GB", { weekday: "short" })} ${clock}`;
 }
 function renderFeed(){
-  const items = feedItems(); if (!items.length) return "";
-  const shown = items.slice(0, ui.feedMore ? 25 : 5);
+  const items = feedItems();
+  if (!items.length) { $app.innerHTML = `<h2 class="sec">Live</h2><div class="empty">Every hole scored in any match appears here as it happens, newest first.</div>`; return; }
+  const shown = items.slice(0, ui.feedMore ? 200 : 40);
   const rows = shown.map(({ m, st, h, r, t }) => {
     const names = side => m[side].map(sname).join(" & ");
     const what = r.w === "H" ? `${ordinal(h)} halved` : `${esc(names(r.w.toLowerCase()))} win the ${ordinal(h)}`;
@@ -1265,10 +1265,11 @@ function renderFeed(){
     return `<button data-act="open" data-id="${m.id}"><span class="stripe" style="background:${col}"></span>
       <span class="w">${what} · ${where}<small>R${m.round} ${FORMATS[m.format].label} M${m.slot} · ${esc(names("a"))} v ${esc(names("b"))}</small></span><span class="ago">${agoTxt(t)}</span></button>`;
   }).join("");
-  const more = items.length > 5 ? `<button class="btn" data-act="feedmore" style="justify-self:start;margin:4px 12px 10px">${ui.feedMore ? "Show fewer" : "Show more"}</button>` : "";
-  return `<section class="round"><div class="rhead"><h2>Latest</h2></div><div class="feed">${rows}</div>${more}</section>`;
+  const more = items.length > 40 ? `<button class="btn" data-act="feedmore" style="justify-self:start;margin:4px 12px 10px">${ui.feedMore ? "Show fewer" : `Show all ${items.length}`}</button>` : "";
+  $app.innerHTML = `<h2 class="sec">Live</h2><p class="lead">Every hole as it's scored, newest first. Tap one to open the match.</p>
+    <section class="round"><div class="feed">${rows}</div>${more}</section>`;
 }
-setInterval(() => { if (ui.tab === "board" && !ui.match && !document.hidden) renderBoard(); }, 60000);
+setInterval(() => { if (ui.tab === "live" && !document.hidden) renderFeed(); }, 60000);
 
 // ---------- stats & awards ----------
 function eventStats(){
@@ -1735,6 +1736,7 @@ function render(force){
   else if (ui.tab === "players") renderPlayers();
   else if (ui.tab === "shots") renderShots();
   else if (ui.tab === "stats") renderStats();
+  else if (ui.tab === "live") renderFeed();
   else if (ui.tab === "course") renderCourse();
   else renderSetup();
   gpsSync();
@@ -1745,8 +1747,8 @@ document.addEventListener("click", e => {
   const act = el.dataset.act, m = ui.match ? getMatch(ui.match) : null;
   switch (act) {
     case "tab": ui.tab = el.dataset.tab; if (ui.tab === "board") ui.match = null; if (ui.tab === "players") ui.player = null; saveUi(); render(true); scrollTo(0, 0); break;
-    case "open": ui.tab = "board"; ui.match = el.dataset.id; ui.hole = firstOpenHole(getMatch(ui.match)); saveUi(); render(true); scrollTo(0, 0); break;
-    case "close": ui.match = null; saveUi(); render(true); break;
+    case "open": ui.backTo = ui.tab === "live" ? "live" : null; ui.tab = "board"; ui.match = el.dataset.id; ui.hole = firstOpenHole(getMatch(ui.match)); saveUi(); render(true); scrollTo(0, 0); break;
+    case "close": ui.match = null; if (ui.backTo) { ui.tab = ui.backTo; ui.backTo = null; } saveUi(); render(true); break;
     case "player": ui.profile = null; ui.tab = "players"; ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
     case "profile": ui.profile = el.dataset.id; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
     case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; shareFile = null; renderModal(); } break;
@@ -1835,7 +1837,7 @@ document.addEventListener("keydown", e => {
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "pin") document.querySelector('[data-act="unlock"]')?.click(); });
 
 // ---------- boot ----------
-if (!["board","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
+if (!["board","live","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
 if (ui.match && !/^r[1-4]m[1-4]$/.test(ui.match)) ui.match = null;
 if (ui.match) ui.hole = 1;
 render(true);

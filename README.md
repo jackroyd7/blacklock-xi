@@ -41,7 +41,7 @@ Once a hole is mapped:
 The photos are Esri World Imagery. The points are saved in the event document, so they're included in the full backup.
 
 ## Other screens
-- **Latest** (top of the Scoreboard): the most recent holes scored in any match and where each match stands. Tap one to open the match. Only holes scored with this version of the app appear.
+- **Live** tab: every hole as it is scored in any match, newest first, with where each match stands. Tap one to open the match. Only holes scored with this version of the app appear.
 - **Match graph** (on each match): who was up after every hole.
 - **Stats:** awards (top points scorer, most holes won, birdies and net birdies, biggest win, best comeback, best partnership), player stats, partnerships and how each hole played against par.
 - **Share as image:** tap the overall score, then **Share as image** and **Share image** to send the score card to WhatsApp or save it.
