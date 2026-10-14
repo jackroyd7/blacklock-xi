@@ -235,6 +235,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .hmmap .tiles img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;-webkit-user-drag:none}
 .hmmap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .hmmap .lbl{font:700 13px var(--body);fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:3px}
+.hmmap .lbl.me{fill:#8ab4f8;font-size:14px;stroke:rgba(0,0,0,.9);stroke-width:3.5px}
 .hmmap .lbl.tg{fill:#ffd54a;font-size:14px;stroke:rgba(0,0,0,.9);stroke-width:3.5px}
 .hm .tg{color:#ffd54a}
 .hmmap .attr{position:absolute;right:4px;bottom:2px;font-size:.6rem;opacity:.7;pointer-events:none}
@@ -310,7 +311,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.3";
+const BUILD = "2026-10-14.4";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -699,7 +700,7 @@ function renderMatch(){
   const si = m.c.si[h-1], par = m.c.par[h-1], s = m.scores[h] || {}, r = st.res[h];
   const ro = noDb;
   const geo = holeGeo(m.r.course, h);
-  html += `<div class="card entry"><div class="ehead"><span class="h">Hole ${h}</span><span class="meta">Par ${par} · SI ${si}${m.tee.m ? ` · ${dist(m.tee.m[h-1])} ${unitLabel()}` : ""}</span>${geo ? `<button class="btn" data-act="hmopen" data-k="${m.r.course}" data-h="${h}">Hole map</button>` : ""}</div>`;
+  html += `<div class="card entry"><div class="ehead"><span class="h">Hole ${h}</span><span class="meta">Par ${par} · SI ${si}${m.tee.m ? ` · ${dist(m.tee.m[h-1])} ${unitLabel()}` : ""}</span></div>`;
   if (geo) html += `<div class="gpsline" data-gps="${m.r.course}" data-h="${h}">${gpsLine(m.r.course, h)}</div>`;
   if (!ro) html += `<div class="quick" role="group" aria-label="Hole result">
       <button class="qa" data-act="quick" data-w="A" aria-pressed="${s.w === "A"}">${esc(teamName("A"))}<br>win hole</button>
@@ -954,7 +955,11 @@ function nearGreen(g){ return ui.gps && gps.pos && metres(gps.pos, g.g) <= NEAR;
 // One line on the scoring screen: distance to the green from where you're standing.
 function gpsLine(k, h){
   const g = holeGeo(k, h); if (!g) return "";
-  if (!ui.gps) return `<button class="btn" data-act="gpson">Show GPS distance to the green</button>`;
+  const mapBtn = label => `<button class="btn" style="margin-left:auto" data-act="hmopen" data-k="${k}" data-h="${h}">${label}</button>`;
+  if (!ui.gps) return mapBtn("Go to hole map");
+  return gpsDist(g, h) + mapBtn("Hole map");
+}
+function gpsDist(g, h){
   if (gps.err) return `<span class="hint">${esc(gps.err)}</span><button class="btn" data-act="gpsoff">Turn GPS off</button>`;
   if (!gps.pos) return `<span class="hint">Finding your position…</span>`;
   const m = metres(gps.pos, g.g);
@@ -1043,7 +1048,7 @@ function hmOverlay(){
     if (p[0] > -40 && p[0] < v.W + 40 && p[1] > -40 && p[1] < v.H + 40) {
       me = p;
       out += `<circle cx="${p[0]}" cy="${p[1]}" r="${Math.max(8, (gps.acc || 0) * v.pxPerM)}" fill="rgba(66,133,244,.18)" stroke="rgba(66,133,244,.5)"/><circle cx="${p[0]}" cy="${p[1]}" r="7" fill="#4285f4" stroke="#fff" stroke-width="2.5"/>`;
-      if (!hm.target) out += line(p, gg, `stroke="#8ab4f8" stroke-width="2"`) + lbl(mid(p, gg), `${D(metres(gps.pos, g.g))} ${u}`);
+      if (!hm.target) out += line(p, gg, `stroke="#8ab4f8" stroke-width="2"`) + lbl(mid(p, gg), `${D(metres(gps.pos, g.g))} ${u}`, 9, 4, "start", "me");
     }
   }
   if (hm.target) {

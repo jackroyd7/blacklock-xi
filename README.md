@@ -36,7 +36,7 @@ Repository **Settings → Pages → Build and deployment → Deploy from a branc
 
 Once a hole is mapped:
 - **Course tab:** tap a hole number for a satellite view turned so the tee is at the bottom and the green at the top, with 100/150/200/250 markers to the green. Tap anywhere on the photo to measure to that point.
-- **Scoring screen:** a **Hole map** button, and (once someone turns GPS on) the distance from their phone to the front, middle and back of the green. GPS distances only appear within 600 m of the green and are off until each person turns them on.
+- **Scoring screen:** a **Go to hole map** button. Once someone turns GPS on in the hole map, the scoring screen also shows the distance from their phone to the front, middle and back of the green. GPS distances only appear within 600 m of the green and are off until each person turns them on.
 
 The photos are Esri World Imagery. The points are saved in the event document, so they're included in the full backup.
 
