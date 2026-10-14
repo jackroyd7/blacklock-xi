@@ -290,6 +290,10 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .award .k{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .award .v{font-family:var(--display);font-weight:700;font-size:1.3rem;line-height:1.15}
 .award .d{font-size:.8rem;color:var(--muted)}
+.offmini{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;text-align:left;width:100%;color:inherit;font:inherit}
+.offmini span:first-child{display:grid;min-width:0}
+.offmini small{color:var(--muted);font-size:.8rem}
+.offmini .btn{flex-shrink:0}
 .scard .share{display:flex;justify-content:center;padding:0 14px 14px}
 
 @media (max-width:520px){
@@ -321,7 +325,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.10";
+const BUILD = "2026-10-14.11";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -833,6 +837,7 @@ function renderScores(el){
 function renderModal(){
   const el = document.getElementById("modal");
   if (ui.scores) return renderScores(el);
+  if (ui.offline) return renderOffline(el);
   const p = ui.profile && players[ui.profile];
   if (!p) { el.innerHTML = ""; el.hidden = true; return; }
   const id = ui.profile, r = playerRecord(id), T = p.team;
@@ -919,7 +924,7 @@ function renderCourse(){
   $app.innerHTML = `<div class="row" style="justify-content:space-between"><h2 class="sec">Courses &amp; handicaps</h2>
       <div class="unit" role="group" aria-label="Distance units"><button data-act="unit" data-u="yd" aria-pressed="${ui.unit !== "m"}">Yards</button><button data-act="unit" data-u="m" aria-pressed="${ui.unit === "m"}">Metres</button></div></div>
     <p class="hint">Distances are shown in ${ui.unit === "m" ? "metres, as on the club's printed card" : "yards, converted from the club's card (which is in metres)"}. Tee numbers such as 54 and 60 are the club's names for the tees, not distances.</p>
-    ${offlineCard()}
+    ${offlineMini()}
     <div class="form"><h3>Handicap calculator</h3>
       <label class="f">Handicap index (use + for plus handicaps)<input type="text" inputmode="decimal" id="cc-index" class="ccbig" value="${esc(ui.cc.index)}" placeholder="e.g. 14.2" autocomplete="off"></label>
       <div id="cc-out">${ccRows(parseIndex(ui.cc.index))}</div>
@@ -1536,7 +1541,7 @@ function offlineCard(){
     (saved.sig !== geoSig() ? " Holes have been mapped or moved since then, so download again." : "");
   else status = `Not downloaded on this phone yet. It's about ${Math.max(1, Math.round(offlineTiles().length * 25 / 1024))} MB, so do it on wifi.`;
   const pct = dl.total ? (dl.done / dl.total * 100).toFixed(1) : 0;
-  return `<div class="form" id="offcard"><h3>Use with no signal</h3>
+  return `<div id="offcard" style="display:grid;gap:10px">
     <p class="hint">${esc(installTip())}</p>
     ${installPrompt && !standalone() ? `<div><button class="btn" data-act="install">Install app</button></div>` : ""}
     <p class="hint">Scores entered with no signal are kept on the phone and sent when signal returns. GPS distances work with no signal. To see the hole maps with no signal, download them first:</p>
@@ -1545,7 +1550,26 @@ function offlineCard(){
     <div class="row"><button class="btn pri" data-act="offdl" ${dl.running || !mapped ? "disabled" : ""}>${saved ? "Download hole maps again" : "Download hole maps for offline"}</button>
       ${saved && !dl.running ? `<button class="btn" data-act="offclear">Remove saved maps</button>` : ""}</div></div>`;
 }
-function offlineRefresh(){ const el = document.getElementById("offcard"); if (el) el.outerHTML = offlineCard(); }
+// Short status for the small tile on the Course tab; the full card opens in a popup.
+function offlineShort(){
+  const saved = offSaved();
+  if (dl.running) return `Downloading hole maps… ${dl.total ? Math.round(dl.done / dl.total * 100) : 0}%`;
+  if (saved) return saved.sig !== geoSig() ? "Hole maps saved, but out of date" : "Hole maps saved on this phone";
+  return standalone() ? "Hole maps not saved yet" : "Not installed · hole maps not saved";
+}
+function offlineMini(){
+  return `<button class="card offmini" id="offmini" data-act="offopen"><span><b>No signal on the course?</b><small>${esc(offlineShort())}</small></span><span class="btn">Set up</span></button>`;
+}
+function renderOffline(el){
+  el.hidden = false;
+  el.innerHTML = `<div class="modal" data-act="closeprofile"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="off-title">
+    <header style="background:var(--accent)"><h2 id="off-title">Use with no signal</h2><button class="x" data-act="closeprofile" aria-label="Close">✕</button></header>
+    <div class="body">${offlineCard()}</div></div></div>`;
+}
+function offlineRefresh(){
+  const el = document.getElementById("offcard"); if (el) el.outerHTML = offlineCard();
+  const mini = document.getElementById("offmini"); if (mini) mini.outerHTML = offlineMini();
+}
 async function offlineDownload(){
   if (dl.running || !("caches" in window)) return;
   const urls = offlineTiles(); if (!urls.length) return;
@@ -1584,7 +1608,7 @@ async function offlineClear(){
 function installTipBanner(){
   let dismissed = false; try { dismissed = !!localStorage.getItem("bx-tip"); } catch {}
   if (standalone() || dismissed) return "";
-  return `<div class="notice" style="display:flex;gap:10px;align-items:flex-start"><span style="flex:1"><b>On the course with no signal?</b> ${esc(installTip())} Hole maps can be downloaded on the Course tab.</span><button class="btn" data-act="tipclose" aria-label="Dismiss">✕</button></div>`;
+  return `<div class="notice" style="display:flex;gap:10px;align-items:flex-start"><span style="flex:1"><b>On the course with no signal?</b> Install the app and save the hole maps on your phone.</span><button class="btn" data-act="offopen">Set up</button><button class="btn" data-act="tipclose" aria-label="Dismiss">✕</button></div>`;
 }
 
 // ---------- setup ----------
@@ -1954,7 +1978,7 @@ document.addEventListener("click", e => {
     case "close": ui.match = null; if (ui.backTo) { ui.tab = ui.backTo; ui.backTo = null; } saveUi(); render(true); break;
     case "player": ui.profile = null; ui.tab = "players"; ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
     case "profile": ui.profile = el.dataset.id; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
-    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; shareFile = null; renderModal(); } break;
+    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; ui.offline = false; shareFile = null; renderModal(); } break;
     case "scores": ui.scores = true; shareFile = null; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
     case "savebios": saveBios(); break;
     case "hole": { const h = +el.dataset.h; if (h >= 1 && h <= 18) { ui.hole = h; render(); } break; }
@@ -1989,6 +2013,7 @@ document.addEventListener("click", e => {
     case "hmclose": hmClose(); break;
     case "hmgo": { const h = hm.h + +el.dataset.d; if (h >= 1 && h <= 18) { hm.h = h; hm.target = null; hm.zoom = { k: 1, x: 0, y: 0 }; hmShell(); hmDraw(); } break; }
     case "hmunit": ui.hmUnit = el.dataset.u; saveUi(); { const m = document.getElementById("hmmeta"); if (m) m.innerHTML = inHmUnits(hmMeta); } hmOverlay(); hmBottom(); break;
+    case "offopen": ui.offline = true; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
     case "offdl": offlineDownload(); break;
     case "offclear": offlineClear(); break;
     case "install": if (installPrompt) { installPrompt.prompt(); installPrompt.userChoice.finally(() => { installPrompt = null; offlineRefresh(); }); } break;
@@ -2040,7 +2065,7 @@ document.addEventListener("change", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && hm.open) { hmClose(); return; }
   if (e.key === "Enter" && e.target.id === "ge-q") { geFind(); return; }
-  if (e.key === "Escape" && (ui.profile || ui.scores)) { ui.profile = null; ui.scores = false; renderModal(); }
+  if (e.key === "Escape" && (ui.profile || ui.scores || ui.offline)) { ui.profile = null; ui.scores = false; ui.offline = false; renderModal(); }
   if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.act === "scores") { e.preventDefault(); e.target.click(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "pin") document.querySelector('[data-act="unlock"]')?.click(); });
