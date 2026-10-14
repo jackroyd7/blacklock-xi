@@ -325,7 +325,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.11";
+const BUILD = "2026-10-14.12";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -1200,7 +1200,7 @@ function loadLeaflet(){
   });
 }
 const GE_MODES = [["t", "Tee", "#ffffff"], ["g", "Green middle", "#e53935"], ["f", "Front", "#ffd54a"], ["b", "Back", "#ffd54a"], ["d", "Dogleg", "#8ab4f8"]];
-const ge = { open: false, k: "tour", h: 1, mode: "t", pts: {}, dirty: false, map: null, layer: null };
+const ge = { open: false, k: "tour", h: 1, mode: "t", pts: {}, dirty: false, map: null, layer: null, hist: [] };
 async function geOpen(){
   if (blocked()) return;
   const el = document.getElementById("ge"); el.hidden = false;
@@ -1210,7 +1210,7 @@ async function geOpen(){
       <input type="text" id="ge-q" value="Camiral Golf, Caldes de Malavella" aria-label="Find a place"><button class="btn" data-act="gefind">Find</button><button class="btn" data-act="geme">My location</button></div>
     <div class="gerow" style="display:grid;gap:6px"><div class="hdone" id="ge-holes"></div><div class="row modes" id="ge-modes"></div><p class="hint" id="ge-hint"></p></div>
     <div id="gemap"><p class="hint" style="padding:16px">Loading the map…</p></div>
-    <div class="gerow"><button class="btn danger" data-act="geclear">Clear hole</button><span class="hint" id="ge-info" style="flex:1;min-width:10rem"></span><button class="btn pri" data-act="gesave">Save hole</button></div></div>`;
+    <div class="gerow"><button class="btn" data-act="geundo" id="ge-undo" disabled>Undo</button><button class="btn" data-act="geremove" id="ge-remove" disabled>Remove point</button><button class="btn danger" data-act="geclear">Clear hole</button><span class="hint" id="ge-info" style="flex:1;min-width:10rem"></span><button class="btn pri" data-act="gesave">Save hole</button></div></div>`;
   let L;
   try { L = await loadLeaflet(); } catch { toast("Couldn't load the map. Check your signal."); geClose(true); return; }
   document.getElementById("gemap").innerHTML = "";
@@ -1218,6 +1218,7 @@ async function geOpen(){
   L.tileLayer(TILE_URL("{z}", "{x}", "{y}"), { maxNativeZoom: MAX_Z, maxZoom: 21, attribution: TILE_ATTR }).addTo(ge.map);
   ge.layer = L.layerGroup().addTo(ge.map);
   ge.map.on("click", e => {
+    geRemember();
     ge.pts[ge.mode] = [e.latlng.lat, e.latlng.lng]; ge.dirty = true;
     const i = GE_MODES.findIndex(x => x[0] === ge.mode); if (i < 3) ge.mode = GE_MODES[i + 1][0];
     geDraw();
@@ -1232,8 +1233,15 @@ function geClose(force){
   const el = document.getElementById("ge"); el.hidden = true; el.innerHTML = "";
   render(true);
 }
+// Undo steps back through this hole's unsaved changes, one tap, drag or removal at a time.
+function geRemember(){ ge.hist.push({ pts: clone(ge.pts), mode: ge.mode, dirty: ge.dirty }); if (ge.hist.length > 50) ge.hist.shift(); }
+function geUndo(){ const last = ge.hist.pop(); if (!last) return; Object.assign(ge, { pts: last.pts, mode: last.mode, dirty: last.dirty }); geDraw(); }
+function geRemove(){
+  if (!ge.pts[ge.mode]) return;
+  geRemember(); delete ge.pts[ge.mode]; ge.dirty = true; geDraw();
+}
 function geHole(h){
-  ge.h = h; ge.pts = clone((course(ge.k).geo || {})[h] || {}); ge.dirty = false;
+  ge.h = h; ge.pts = clone((course(ge.k).geo || {})[h] || {}); ge.dirty = false; ge.hist = [];
   ge.mode = !ge.pts.t ? "t" : !ge.pts.g ? "g" : "f";
   const pts = Object.values(ge.pts), prev = holeGeo(ge.k, h - 1), all = [];
   for (let i = 1; i <= 18; i++) { const g = holeGeo(ge.k, i); if (g) all.push(g.t, g.g); }
@@ -1259,12 +1267,19 @@ function geDraw(){
   for (const [k, , col] of GE_MODES) if (p[k]) {
     const icon = L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13],
       html: `<div style="width:26px;height:26px;border-radius:50%;background:${col};border:2px solid #000;display:grid;place-content:center;font:700 12px sans-serif;color:#000">${k.toUpperCase()}</div>` });
-    L.marker(p[k], { icon, draggable: true }).addTo(ge.layer).on("dragend", e => { const ll = e.target.getLatLng(); ge.pts[k] = [ll.lat, ll.lng]; ge.dirty = true; geDraw(); });
+    // Tap a marker to select it (then Remove point deletes it); drag it to move it.
+    L.marker(p[k], { icon, draggable: true }).addTo(ge.layer)
+      .on("click", () => { ge.mode = k; geDraw(); })
+      .on("dragstart", geRemember)
+      .on("dragend", e => { const ll = e.target.getLatLng(); ge.pts[k] = [ll.lat, ll.lng]; ge.dirty = true; ge.mode = k; geDraw(); });
   }
   geStrip();
   document.getElementById("ge-modes").innerHTML = GE_MODES.map(([k, label]) => `<button data-act="gemode" data-m="${k}" aria-pressed="${ge.mode === k}" class="${p[k] ? "set" : ""}">${label}</button>`).join("");
   const label = GE_MODES.find(x => x[0] === ge.mode)[1].toLowerCase();
-  document.getElementById("ge-hint").textContent = `Hole ${ge.h}: tap the map to place the ${label}. Drag a marker to move it. Tee and green middle are needed; front, back and dogleg are optional. Put the tee on the tee box used for the rounds.`;
+  document.getElementById("ge-hint").textContent = `Hole ${ge.h}: tap the map to place the ${label}. Drag a marker to move it, or tap it and use Remove. Undo steps back through your changes. Tee and green middle are needed; front, back and dogleg are optional. Put the tee on the tee box used for the rounds.`;
+  const undo = document.getElementById("ge-undo"), rem = document.getElementById("ge-remove");
+  if (undo) undo.disabled = !ge.hist.length;
+  if (rem) { rem.disabled = !p[ge.mode]; rem.textContent = `Remove ${label}`; }
   const c = course(ge.k), tee = defTee(c);
   document.getElementById("ge-info").textContent = p.t && p.g
     ? `Tee to middle ${Math.round(viaLen(p, p.g))} m (${Math.round(viaLen(p, p.g) * 1.09361)} yd). Card, tee ${tee.id}: ${tee.m ? tee.m[ge.h - 1] + " m" : "–"}.${ge.dirty ? " Not saved yet." : ""}`
@@ -1292,6 +1307,7 @@ function geSave(){
 function geClear(){
   if (blocked()) return;
   if (holeGeo(ge.k, ge.h)) { if (!confirm(`Remove the saved map for hole ${ge.h}?`)) return; geoWrite(ge.k, ge.h, null).catch(onWriteError); }
+  geRemember(); ge.hist[ge.hist.length - 1].dirty = true; // undoing a clear brings the points back, ready to save again
   ge.pts = {}; ge.mode = "t"; ge.dirty = false; geDraw();
 }
 async function geFind(){
@@ -2030,6 +2046,8 @@ document.addEventListener("click", e => {
     case "gefind": geFind(); break;
     case "geme": geMe(); break;
     case "gemode": ge.mode = el.dataset.m; geDraw(); break;
+    case "geundo": geUndo(); break;
+    case "geremove": geRemove(); break;
     case "gehole": { const h = +el.dataset.h; if (h !== ge.h && (!ge.dirty || confirm(`Hole ${ge.h} has unsaved changes. Discard them?`))) geHole(h); break; }
     case "feedmore": ui.feedMore = !ui.feedMore; render(true); break;
     case "sharemake": makeShareImage(el); break;

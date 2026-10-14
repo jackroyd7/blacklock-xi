@@ -32,7 +32,7 @@ Repository **Settings → Pages → Build and deployment → Deploy from a branc
 4. Set the **Pairings** for each round (they can be done round by round).
 
 ## Hole maps and GPS distances
-**Setup → Hole maps → Open the hole map editor** (behind the PIN). For each hole, tap the tee and the middle of the green on the satellite photo. Front of green, back of green and a dogleg corner are optional. Drag a marker to move it, then **Save hole**, which moves on to the next hole. The editor shows the measured tee-to-green length next to the card length as a check. It takes about 10 minutes per course and is easiest on a laptop or tablet.
+**Setup → Hole maps → Open the hole map editor** (behind the PIN). For each hole, tap the tee and the middle of the green on the satellite photo. Front of green, back of green and a dogleg corner are optional. Drag a marker to move it, tap a marker and use **Remove** to delete it, or **Undo** to step back, then **Save hole**, which moves on to the next hole. The editor shows the measured tee-to-green length next to the card length as a check. It takes about 10 minutes per course and is easiest on a laptop or tablet.
 
 Once a hole is mapped:
 - **Course tab:** tap a hole number for a satellite view turned so the tee is at the bottom and the green at the top, with red 100/150/200/250 markers showing the straight-line distance to the middle of the green. Tap anywhere on the photo to measure to that point. Pinch or drag on the photo to zoom and move around it (the page itself doesn't zoom); **Fit hole** puts it back. The **yd / m** switch under the photo changes the hole map's units only; the rest of the app keeps its own Yards/Metres setting.
