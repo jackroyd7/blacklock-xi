@@ -1,7 +1,7 @@
 {
   "name": "Blacklock XI",
   "short_name": "Blacklock XI",
-  "description": "Live Ryder Cup-style scoreboard for the Blacklock XI.",
+  "description": "Live match play scoreboard for the Blacklock XI.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

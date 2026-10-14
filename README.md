@@ -1,6 +1,6 @@
 # Blacklock XI scoreboard
 
-Live Ryder Cup-style match play scoreboard for the Blacklock XI at Camiral: Crows v Smugglers, four rounds, 20 points, 10½ to win.
+Live match play scoreboard for the Blacklock XI at Camiral: Crows v Smugglers, four rounds, 20 points, 10½ to win.
 
 Anyone with the link can follow the live scores and enter scores on their phone. Setup (teams, courses, players, pairings) can be locked with a PIN.
 
