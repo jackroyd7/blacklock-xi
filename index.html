@@ -244,7 +244,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .hmmap .tiles img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;-webkit-user-drag:none}
 .hmmap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .hmmap .lbl{font:700 13px var(--body);fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:3px}
-.hmmap .lbl.mk{fill:#ff8ad8}
+.hmmap .lbl.mk{fill:#ff4d4d}
 .hmmap .lbl.me{fill:#8ab4f8;font-size:14px;stroke:rgba(0,0,0,.9);stroke-width:3.5px}
 .hmmap .lbl.tg{fill:#ffd54a;font-size:14px;stroke:rgba(0,0,0,.9);stroke-width:3.5px}
 .hm .tg{color:#ffd54a}
@@ -321,7 +321,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.8";
+const BUILD = "2026-10-14.9";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -1126,7 +1126,7 @@ function hmOverlay_(){
     for (const [a, b, len] of segs) {
       if (rest > len) { rest -= len; continue; }
       const A = S(a), B = S(b), k = rest / len, p = [A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k];
-      out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#ff8ad8" stroke="#000" stroke-width="1"/>` + lbl(p, mark, 9, 4, "start", "mk"); break;
+      out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#ff4d4d" stroke="#000" stroke-width="1"/>` + lbl(p, mark, 9, 4, "start", "mk"); break;
     }
   }
   if (g.d) { const t = S(g.t), d = S(g.d), gg = S(g.g);
@@ -1170,7 +1170,7 @@ function hmBottom_(){
     <button class="rb${ui.gps ? " on" : ""}" data-act="${ui.gps ? "gpsoff" : "gpson"}">GPS ${ui.gps ? "on" : "off"}</button></div>`;
   html += hm.target
     ? `<div class="row" style="justify-content:space-between"><span>Target: <b class="tg">${D(metres(near ? from : g.t, hm.target))} ${u}</b> from ${near ? "you" : "the tee"}, <b class="tg">${D(metres(hm.target, g.g))} ${u}</b> to the middle</span><button class="rb" data-act="hmclear">Clear</button></div>`
-    : `<span style="opacity:.7">Tap the photo to measure to any point. Pink dots mark 100, 150, 200 and 250 ${u} to the middle of the green.</span>`;
+    : `<span style="opacity:.7">Tap the photo to measure to any point. Red dots mark 100, 150, 200 and 250 ${u} to the middle of the green.</span>`;
   el.innerHTML = html;
 }
 // Redraw when the photo area changes size (phone rotated, or the panel below grows).
