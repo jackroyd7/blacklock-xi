@@ -325,7 +325,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.12";
+const BUILD = "2026-10-14.13";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -1335,7 +1335,8 @@ function matchGraph(m, st){
   let grid = "";
   for (let v = -top; v <= top; v++) grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--${v ? "line" : "muted"})" stroke-width="${v ? 1 : 1.5}"/>`;
   const yl = v => `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${v === 0 ? "AS" : Math.abs(v)}</text>`;
-  const xl = h => `<text x="${x(h)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${h}</text>`;
+  // Every hole is labelled, with a small tick; holes played so far are in darker text.
+  const xl = h => `<line x1="${x(h)}" x2="${x(h)}" y1="${H - B}" y2="${H - B + 3}" stroke="var(--line)"/><text x="${x(h)}" y="${H - 6}" text-anchor="middle" font-size="10" fill="var(--${st.after[h] != null ? "ink" : "muted"})">${h}</text>`;
   const desc = (h, v) => `After the ${ordinal(h)}: ${v === 0 ? "all square" : `${teamName(v > 0 ? "A" : "B")} ${Math.abs(v)} up`}`;
   const hits = hs.map(h => `<rect x="${x(h) - 9}" y="${T}" width="18" height="${H - T - B}" fill="transparent" data-wtip="${esc(desc(h, st.after[h]))}"/>`).join("");
   const dots = pts.slice(1).map(p => `<circle cx="${x(p[0])}" cy="${y(p[1])}" r="4" fill="${p[1] > 0 ? "var(--ta)" : p[1] < 0 ? "var(--tb)" : "var(--muted)"}" stroke="var(--surface)" stroke-width="2"/>`).join("");
@@ -1343,7 +1344,7 @@ function matchGraph(m, st){
   return `<div class="card worm"><b>Match graph</b>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Match position after each hole. ${esc(desc(lastH, st.after[lastH]))}.">
       <defs><clipPath id="${id}a"><rect x="0" y="0" width="${W}" height="${y0}"/></clipPath><clipPath id="${id}b"><rect x="0" y="${y0}" width="${W}" height="${H}"/></clipPath></defs>
-      ${grid}${[-top, 0, top].map(yl).join("")}${[1, 9, 18].map(xl).join("")}
+      ${grid}${[-top, 0, top].map(yl).join("")}${Array.from({ length: 18 }, (_, i) => xl(i + 1)).join("")}
       <line x1="${x(9.5)}" x2="${x(9.5)}" y1="${T}" y2="${H - B}" stroke="var(--line)" stroke-dasharray="3 3"/>
       <path d="${area}" fill="var(--ta)" opacity=".16" clip-path="url(#${id}a)"/><path d="${area}" fill="var(--tb)" opacity=".16" clip-path="url(#${id}b)"/>
       <path d="${line}" fill="none" stroke="var(--ta)" stroke-width="2" stroke-linejoin="round" clip-path="url(#${id}a)"/>
