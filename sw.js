@@ -1,11 +1,12 @@
 // Blacklock XI offline support.
 // Keeps a copy of the app on the phone so it opens with no signal, and serves hole map photos that were
 // downloaded for offline use. Scores themselves are kept offline by Firestore, not by this file.
-const APP = "bx-app-v1", TILES = "bx-tiles", LIBS = "bx-libs-v1";
+const APP = "bx-app-v1", TILES = "bx-tiles", LIBS = "bx-libs-v2";
 const CORE = ["./", "config.js", "logo.png", "favicon.png", "apple-touch-icon.png", "icon-192.png", "manifest.webmanifest"];
 const EXTRA = [
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js",
   "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js",
+  "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js",
   "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
 ];
 const FONTS_CSS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap";

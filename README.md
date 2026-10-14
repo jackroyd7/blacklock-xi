@@ -40,6 +40,18 @@ Once a hole is mapped:
 
 The photos are Esri World Imagery. The points are saved in the event document, so they're included in the full backup.
 
+## Photos and videos
+The **Photos** tab lets anyone add photos and videos for everyone to see, with an optional caption, their name and the match it's from. Items tagged to a match also appear on that match's screen. Photos are shrunk on the phone before uploading (about 300 KB each). Videos upload as they are, up to 200 MB, so film in 1080p rather than 4K. Uploads need signal. People can delete what they added, and organisers (Setup unlocked) can delete anything.
+
+### One-time setup (about 10 minutes)
+Files are kept in Firebase Storage, which Google only offers on the pay-as-you-go **Blaze** plan. For a weekend of photos and clips the cost should be nothing or pennies.
+1. **Firebase console → ⚙ → Usage and billing → Details & settings → Modify plan → Blaze.** Add a card, then set a **budget alert** (e.g. £5) so you're emailed if costs ever approach it.
+2. **Build → Storage → Get started.** Choose **production mode** and a location (a US region such as `us-central1` has the largest free allowance; a European one costs a few pence per GB per month).
+3. **Storage → Rules:** replace everything with the contents of [`storage.rules`](storage.rules) and click **Publish**.
+4. **Firestore Database → Rules:** replace everything with the contents of [`firestore.rules`](firestore.rules) (it now also allows `media`) and click **Publish**.
+
+Until Storage is set up, the Photos tab says so and nothing else changes. Photos and videos aren't part of the full backup; they stay in Firebase Storage and can be downloaded from there.
+
 ## Using it with no signal
 - **Install it:** on iPhone, open the link in Safari, tap Share, then **Add to Home Screen**. On Android, use the browser menu, then **Install app**. It then opens full screen and works with no signal. On iPhone this also stops Safari clearing the saved data after a week of not opening it.
 - **The app:** after it has been opened once with signal, a copy stays on the phone (`sw.js`), so it opens anywhere. New versions still arrive when there's signal, with the Update bar.

@@ -294,6 +294,21 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .offmini span:first-child{display:grid;min-width:0}
 .offmini small{color:var(--muted);font-size:.8rem}
 .offmini .btn{flex-shrink:0}
+.mgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.mgrid.small{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (min-width:640px){.mgrid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.mtile{position:relative;aspect-ratio:1;border:0;padding:0;border-radius:6px;overflow:hidden;background:var(--surface2)}
+.mtile img{width:100%;height:100%;object-fit:cover;display:block}
+.mtile .noimg{display:grid;place-content:center;height:100%;font-size:1.6rem;color:var(--muted)}
+.mtile .vbadge{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.65);color:#fff;font-size:.7rem;font-weight:700;padding:1px 6px;border-radius:4px}
+.mview{position:fixed;inset:0;z-index:44;background:#000;color:#fff;display:grid;grid-template-rows:auto 1fr auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.mvtop,.mvbot{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(0,0,0,.85)}
+.mvtop .meta{flex:1;min-width:0;font-size:.82rem;opacity:.9}
+.mvbot{justify-content:space-between;flex-wrap:wrap;font-size:.9rem}
+.mvbody{min-height:0;min-width:0;position:relative;overflow:hidden}
+.mvbody img,.mvbody video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;background:#000}
+.mview .rb{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:8px;padding:8px 12px;font-weight:700;min-width:40px;text-decoration:none;font-size:.9rem}
+.mview .rb:disabled{opacity:.35}
 .scard .share{display:flex;justify-content:center;padding:0 14px 14px}
 
 @media (max-width:520px){
@@ -317,15 +332,17 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <div class="update" id="update" hidden><span>A new version of the scoreboard is available.</span><button class="btn pri" data-act="update">Update</button></div>
 <div id="modal"></div>
 <div id="hm" hidden></div>
+<div id="mview" hidden></div>
 <div id="ge" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="config.js"></script>
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.14";
+const BUILD = "2026-10-14.15";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -636,7 +653,7 @@ function renderHeader(){
       <i style="right:0;width:${pct(t.B.won)};background:var(--tb)"></i>
       <i class="mid"></i>
     </div>
-    <nav class="tabs">${tab("board","Scoreboard")}${tab("live","Live")}${tab("course","Course")}${tab("shots","Shots")}${tab("stats","Stats")}${tab("players","Players")}${tab("setup","Setup")}</nav>`;
+    <nav class="tabs">${tab("board","Scoreboard")}${tab("live","Live")}${tab("course","Course")}${tab("shots","Shots")}${tab("stats","Stats")}${tab("players","Players")}${tab("photos","Photos")}${tab("setup","Setup")}</nav>`;
 }
 
 // ---------- scoreboard ----------
@@ -746,6 +763,7 @@ function renderMatch(){
   html += `</div>`;
 
   html += matchGraph(m, st);
+  html += matchMedia(m.id);
   html += scorecard(m, st);
   $app.innerHTML = html;
 }
@@ -1628,6 +1646,152 @@ function installTipBanner(){
   return `<div class="notice" style="display:flex;gap:10px;align-items:flex-start"><span style="flex:1"><b>On the course with no signal?</b> Install the app and save the hole maps on your phone.</span><button class="btn" data-act="offopen">Set up</button><button class="btn" data-act="tipclose" aria-label="Dismiss">✕</button></div>`;
 }
 
+// ---------- photos & videos ----------
+// Files go to Firebase Storage under media/<id>/; one Firestore document per item in "media" holds the
+// caption, who added it, the match it's from and the download links. Photos are shrunk on the phone first.
+let media = [], store = null;
+const MAX_VIDEO = 200 * 1024 * 1024;
+const up = { busy: false, pct: 0, label: "", err: "", file: null };
+function deviceId(){
+  try { let d = localStorage.getItem("bx-device"); if (!d) { d = Math.random().toString(36).slice(2, 12); localStorage.setItem("bx-device", d); } return d; } catch { return "anon"; }
+}
+function myName(){ try { return localStorage.getItem("bx-name") || ""; } catch { return ""; } }
+function matchLabel(mid){
+  const m = getMatch(mid); if (!m.ready) return `R${m.round} M${m.slot}`;
+  return `R${m.round} M${m.slot} · ${m.a.map(sname).join(" & ")} v ${m.b.map(sname).join(" & ")}`;
+}
+function canDelete(it){ return it.owner === deviceId() || !setupLocked(); }
+function fmtDur(s){ s = Math.round(s || 0); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+
+// Shrinks a picture to at most `max` pixels on its longest side, as a JPEG.
+async function shrinkImage(src, max, quality){
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return { blob: await new Promise(r => c.toBlob(r, "image/jpeg", quality)), w: c.width, h: c.height };
+}
+// A still from about a second into a video, for the grid; null if the phone can't make one.
+async function videoStill(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const v = document.createElement("video"); v.muted = true; v.playsInline = true; v.preload = "metadata"; v.src = url;
+    await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = rej; setTimeout(rej, 8000); });
+    const dur = v.duration;
+    v.currentTime = Math.min(1, (dur || 2) / 2);
+    await new Promise((res, rej) => { v.onseeked = res; setTimeout(rej, 8000); });
+    const k = Math.min(1, 480 / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement("canvas"); c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+    c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+    return { blob: await new Promise(r => c.toBlob(r, "image/jpeg", 0.75)), dur, w: v.videoWidth, h: v.videoHeight };
+  } catch { return null; } finally { URL.revokeObjectURL(url); }
+}
+function putFile(path, blob, type, onPct){
+  return new Promise((res, rej) => {
+    const task = store.ref(path).put(blob, { contentType: type, cacheControl: "public,max-age=31536000" });
+    task.on("state_changed", s => onPct && onPct(s.bytesTransferred / Math.max(1, s.totalBytes)), rej,
+      async () => res(await task.snapshot.ref.getDownloadURL()));
+  });
+}
+async function uploadMedia(file){
+  if (up.busy) return;
+  if (!store) { toast("Photo storage isn't set up yet. See the README."); return; }
+  if (!navigator.onLine) { toast("Uploading needs signal. Try again when you have some."); return; }
+  const isVideo = file.type.startsWith("video/");
+  if (!isVideo && !file.type.startsWith("image/")) { toast("That isn't a photo or a video."); return; }
+  if (isVideo && file.size > MAX_VIDEO) { toast(`That video is ${Math.round(file.size / 1048576)} MB. The limit is 200 MB, so trim it or film in 1080p.`); return; }
+  const caption = val("md-caption").trim(), by = val("md-name").trim(), mid = val("md-match");
+  try { localStorage.setItem("bx-name", by); } catch {}
+  Object.assign(up, { busy: true, pct: 0, err: "", file, label: isVideo ? "Preparing the video…" : "Shrinking the photo…" }); mediaProgress();
+  const id = fs.collection("media").doc().id, base = `media/${id}/`;
+  try {
+    const doc = { type: isVideo ? "video" : "photo", caption, by, match: mid || null, at: Date.now(), owner: deviceId() };
+    if (isVideo) {
+      const still = await videoStill(file);
+      const ext = (file.name.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+      up.label = "Uploading the video…"; mediaProgress();
+      doc.url = await putFile(base + "video." + ext, file, file.type, p => { up.pct = p; mediaProgress(); });
+      doc.path = base + "video." + ext;
+      if (still) { doc.thumb = await putFile(base + "thumb.jpg", still.blob, "image/jpeg"); doc.dur = still.dur; doc.w = still.w; doc.h = still.h; }
+    } else {
+      const src = URL.createObjectURL(file);
+      try {
+        const big = await shrinkImage(src, 1600, 0.82), small = await shrinkImage(src, 480, 0.75);
+        up.label = "Uploading the photo…"; mediaProgress();
+        doc.url = await putFile(base + "photo.jpg", big.blob, "image/jpeg", p => { up.pct = p; mediaProgress(); });
+        doc.thumb = await putFile(base + "thumb.jpg", small.blob, "image/jpeg");
+        doc.path = base + "photo.jpg"; doc.w = big.w; doc.h = big.h;
+      } finally { URL.revokeObjectURL(src); }
+    }
+    await fs.collection("media").doc(id).set(doc);
+    Object.assign(up, { busy: false, file: null, pct: 0 });
+    const cap = document.getElementById("md-caption"); if (cap) cap.value = "";
+    toast(isVideo ? "Video added" : "Photo added");
+  } catch (e) {
+    console.error(e);
+    Object.assign(up, { busy: false, err: e && e.code === "storage/unauthorized" ? "Storage refused the upload. Check the Storage rules in Firebase." : "The upload didn't finish. Check your signal and try again." });
+  }
+  mediaProgress(); if (ui.tab === "photos") render(true);
+}
+function mediaProgress(){
+  const el = document.getElementById("md-progress"); if (!el) return;
+  el.innerHTML = up.busy ? `<p class="hint"><b>${esc(up.label)}</b>${up.pct ? ` ${Math.round(up.pct * 100)}%` : ""}</p><div class="bar"><i style="left:0;width:${(up.pct * 100).toFixed(1)}%;background:var(--accent)"></i></div>`
+    : up.err ? `<p class="hint" style="color:var(--bad)">${esc(up.err)} ${up.file ? `<button class="btn" data-act="mdretry">Try again</button>` : ""}</p>` : "";
+}
+async function deleteMedia(id){
+  const it = media.find(x => x.id === id); if (!it || !canDelete(it)) return;
+  if (!confirm(`Delete this ${it.type} for everyone?`)) return;
+  try {
+    await Promise.all([it.path, it.thumb && `media/${id}/thumb.jpg`].filter(Boolean).map(p => store.ref(p).delete().catch(() => {})));
+    await fs.collection("media").doc(id).delete();
+    ui.media = null; renderModal(); toast("Deleted");
+  } catch (e) { onWriteError(e); }
+}
+function mediaTile(it){
+  return `<button class="mtile" data-act="mdopen" data-id="${it.id}" aria-label="${esc(it.type === "video" ? "Video" : "Photo")}${it.caption ? ": " + esc(it.caption) : ""}">
+    ${it.thumb ? `<img src="${esc(it.thumb)}" alt="" loading="lazy">` : `<span class="noimg">▶</span>`}
+    ${it.type === "video" ? `<span class="vbadge">▶ ${fmtDur(it.dur)}</span>` : ""}</button>`;
+}
+function renderPhotos(){
+  const opts = readyMatches().map(m => `<option value="${m.id}" ${ui.mdMatch === m.id ? "selected" : ""}>${esc(matchLabel(m.id))}</option>`).join("");
+  const names = sortedPlayers().map(([, p]) => `<option value="${esc(p.name)}">`).join("");
+  const grid = media.map(mediaTile).join("");
+  $app.innerHTML = `<h2 class="sec">Photos &amp; videos</h2>
+    ${!store ? `<div class="notice"><b>Not set up yet.</b> The organiser needs to turn on Firebase Storage (see the README) before photos and videos can be added.</div>` : `
+    <div class="form"><div class="fgrid">
+      <label class="f">Your name<input type="text" id="md-name" list="md-names" value="${esc(myName())}" placeholder="Optional" autocomplete="off"><datalist id="md-names">${names}</datalist></label>
+      <label class="f">From a match<select id="md-match"><option value="">None</option>${opts}</select></label></div>
+      <label class="f">Caption<input type="text" id="md-caption" maxlength="140" placeholder="e.g. Carter's chip-in on the 7th"></label>
+      <div class="row"><label class="btn pri" style="cursor:pointer">Add photo or video<input type="file" id="md-file" accept="image/*,video/*" hidden ${up.busy ? "disabled" : ""}></label>
+        <span class="hint">Videos up to 200 MB. Uploads need signal.</span></div>
+      <div id="md-progress"></div></div>`}
+    ${grid ? `<div class="mgrid">${grid}</div>` : `<div class="empty">No photos or videos yet.</div>`}`;
+  mediaProgress();
+}
+// Photos on a match's own screen.
+function matchMedia(mid){
+  const items = media.filter(x => x.match === mid); if (!items.length) return "";
+  return `<div class="card" style="padding:10px 12px;display:grid;gap:8px"><b>Photos &amp; videos</b><div class="mgrid small">${items.map(mediaTile).join("")}</div></div>`;
+}
+function renderMediaView(el){
+  const i = media.findIndex(x => x.id === ui.media), it = media[i];
+  if (!it) { ui.media = null; el.innerHTML = ""; el.hidden = true; delete el.dataset.media; return; }
+  if (el.dataset.media === it.id && !el.hidden) return; // don't restart a playing video on live updates
+  el.dataset.media = it.id; el.hidden = false;
+  const when = agoTxt(it.at);
+  el.innerHTML = `<div class="mview" role="dialog" aria-modal="true" aria-label="${it.type === "video" ? "Video" : "Photo"}">
+    <div class="mvtop"><button class="rb" data-act="mdclose" aria-label="Close">✕</button>
+      <span class="meta">${it.by ? `<b>${esc(it.by)}</b> · ` : ""}${esc(when)}${it.match ? `<br>${esc(matchLabel(it.match))}` : ""}</span>
+      <button class="rb" data-act="mdgo" data-d="-1" ${i === 0 ? "disabled" : ""} aria-label="Newer">‹</button>
+      <button class="rb" data-act="mdgo" data-d="1" ${i === media.length - 1 ? "disabled" : ""} aria-label="Older">›</button></div>
+    <div class="mvbody">${it.type === "video" ? `<video src="${esc(it.url)}" ${it.thumb ? `poster="${esc(it.thumb)}"` : ""} controls playsinline preload="metadata"></video>` : `<img src="${esc(it.url)}" alt="${esc(it.caption || "Photo")}">`}</div>
+    <div class="mvbot">${it.caption ? `<span>${esc(it.caption)}</span>` : "<span></span>"}
+      <span class="row"><a class="rb" href="${esc(it.url)}" target="_blank" rel="noopener" download>Save</a>
+      ${it.match ? `<button class="rb" data-act="open" data-id="${it.match}">Match</button>` : ""}
+      ${canDelete(it) ? `<button class="rb" data-act="mddel" data-id="${it.id}">Delete</button>` : ""}</span></div></div>`;
+}
+function closeMediaView(){ ui.media = null; const el = document.getElementById("mview"); el.hidden = true; el.innerHTML = ""; delete el.dataset.media; }
+
 // ---------- setup ----------
 function renderSetup(){
   if (setupLocked()) {
@@ -1973,6 +2137,7 @@ function render(force){
   renderHeader();
   renderModal();
   if (ui.tab === "course" && !force && $app.dataset.view === "course") return;
+  if (ui.tab === "photos" && !force && $app.dataset.view === "photos" && (up.busy || document.activeElement && document.activeElement.closest && document.activeElement.closest("main"))) return;
   if (ui.tab === "setup" && !force && $app.dataset.view === "setup" && setupDirty) return; // don't wipe half-typed setup forms on live updates
   $app.dataset.view = ui.tab;
   setupDirty = false;
@@ -1981,17 +2146,19 @@ function render(force){
   else if (ui.tab === "shots") renderShots();
   else if (ui.tab === "stats") renderStats();
   else if (ui.tab === "live") renderFeed();
+  else if (ui.tab === "photos") renderPhotos();
   else if (ui.tab === "course") renderCourse();
   else renderSetup();
   gpsSync();
   if (ge.open) geStrip();
+  if (ui.media) renderMediaView(document.getElementById("mview"));
 }
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-act]"); if (!el) return;
   const act = el.dataset.act, m = ui.match ? getMatch(ui.match) : null;
   switch (act) {
     case "tab": ui.tab = el.dataset.tab; if (ui.tab === "board") ui.match = null; if (ui.tab === "players") ui.player = null; saveUi(); render(true); scrollTo(0, 0); break;
-    case "open": ui.backTo = ui.tab === "live" ? "live" : null; ui.tab = "board"; ui.match = el.dataset.id; ui.hole = firstOpenHole(getMatch(ui.match)); saveUi(); render(true); scrollTo(0, 0); break;
+    case "open": if (ui.media) closeMediaView(); ui.backTo = ui.tab === "live" ? "live" : null; ui.tab = "board"; ui.match = el.dataset.id; ui.hole = firstOpenHole(getMatch(ui.match)); saveUi(); render(true); scrollTo(0, 0); break;
     case "close": ui.match = null; if (ui.backTo) { ui.tab = ui.backTo; ui.backTo = null; } saveUi(); render(true); break;
     case "player": ui.profile = null; ui.tab = "players"; ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
     case "profile": ui.profile = el.dataset.id; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
@@ -2035,6 +2202,11 @@ document.addEventListener("click", e => {
     case "offclear": offlineClear(); break;
     case "install": if (installPrompt) { installPrompt.prompt(); installPrompt.userChoice.finally(() => { installPrompt = null; offlineRefresh(); }); } break;
     case "tipclose": try { localStorage.setItem("bx-tip", "1"); } catch {} render(true); break;
+    case "mdopen": ui.media = el.dataset.id; renderMediaView(document.getElementById("mview")); break;
+    case "mdclose": closeMediaView(); break;
+    case "mdgo": { const i = media.findIndex(x => x.id === ui.media) + +el.dataset.d; if (media[i]) { ui.media = media[i].id; renderMediaView(document.getElementById("mview")); } break; }
+    case "mddel": deleteMedia(el.dataset.id); break;
+    case "mdretry": if (up.file) uploadMedia(up.file); break;
     case "hmfit": hm.zoom = { k: 1, x: 0, y: 0 }; hmLayout(true); break;
     case "hmtap": { if (!hm.view || hm.dragged) { hm.dragged = false; break; } const r = el.getBoundingClientRect(); hm.target = hm.view.fromScreen(e.clientX - r.left, e.clientY - r.top); hmOverlay(); hmBottom(); break; }
     case "hmclear": hm.target = null; hmOverlay(); hmBottom(); break;
@@ -2061,6 +2233,8 @@ document.addEventListener("input", e => { if (ui.tab === "setup" && e.target.clo
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "restore-file") { readRestoreFile(t.files[0]); return; }
+  if (t.id === "md-file") { const f = t.files[0]; t.value = ""; if (f) uploadMedia(f); return; }
+  if (t.id === "md-match") { ui.mdMatch = t.value; return; }
   if (t.id === "ge-course") {
     if (ge.dirty && !confirm(`Hole ${ge.h} has unsaved changes. Discard them?`)) { t.value = ge.k; return; }
     ge.k = t.value; geHole(1); return;
@@ -2082,6 +2256,7 @@ document.addEventListener("change", e => {
   }
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && ui.media) { closeMediaView(); return; }
   if (e.key === "Escape" && hm.open) { hmClose(); return; }
   if (e.key === "Enter" && e.target.id === "ge-q") { geFind(); return; }
   if (e.key === "Escape" && (ui.profile || ui.scores || ui.offline)) { ui.profile = null; ui.scores = false; ui.offline = false; renderModal(); }
@@ -2091,7 +2266,7 @@ document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id
 
 // ---------- boot ----------
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(e => console.warn("Offline support unavailable:", e));
-if (!["board","live","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
+if (!["board","live","photos","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
 if (ui.match && !/^r[1-4]m[1-4]$/.test(ui.match)) ui.match = null;
 if (ui.match) ui.hole = 1;
 render(true);
@@ -2114,8 +2289,10 @@ try {
   if (!window.firebase || !CFG.firebase || !CFG.firebase.projectId) throw new Error("Firebase not configured");
   firebase.initializeApp(CFG.firebase);
   fs = firebase.firestore();
+  try { if (firebase.storage && CFG.firebase.storageBucket) store = firebase.storage(); } catch (e) { console.warn("Storage unavailable:", e); }
   fs.enablePersistence({ synchronizeTabs: true }).catch(e => console.warn("Offline storage unavailable:", e.code));
   fs.doc("event/main").onSnapshot(s => { ev = mergeEvent(s.exists ? s.data() : null); loaded.ev = true; render(); }, err => console.error(err));
+  fs.collection("media").orderBy("at", "desc").limit(400).onSnapshot(s => { media = s.docs.map(d => Object.assign({ id: d.id }, d.data())); render(); }, err => console.error(err));
   fs.collection("players").onSnapshot(s => { players = {}; s.docs.forEach(d => players[d.id] = d.data()); loaded.p = true; render(); }, err => console.error(err));
   fs.collection("matches").onSnapshot({ includeMetadataChanges: true }, s => {
     matches = {}; s.docs.forEach(d => matches[d.id] = d.data());
