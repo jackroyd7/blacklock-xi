@@ -321,7 +321,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.9";
+const BUILD = "2026-10-14.10";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -1119,13 +1119,18 @@ function hmOverlay_(){
   const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   const route = [g.t, g.d, g.g].filter(Boolean);
   let out = `<polyline points="${route.map(S).map(p => p.join(",")).join(" ")}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="7 6" opacity=".9"/>`;
-  // Distance markers measured back from the middle of the green along the line of play.
-  const back = [...route].reverse(), segs = back.slice(1).map((p, i) => [back[i], p, metres(back[i], p)]), total = sum(segs.map(x => x[2]));
+  // Distance markers sit on the line of play, at the point that is that far from the middle of the green
+  // as the crow flies (not measured round a dogleg).
+  const back = [...route].reverse(), lerp = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   for (const mark of [100, 150, 200, 250]) {
-    let rest = curUnit() === "m" ? mark : mark / 1.09361; if (rest > total - 25) continue;
-    for (const [a, b, len] of segs) {
-      if (rest > len) { rest -= len; continue; }
-      const A = S(a), B = S(b), k = rest / len, p = [A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k];
+    const want = curUnit() === "m" ? mark : mark / 1.09361;
+    if (want > metres(g.t, g.g) - 25) continue;
+    for (let i = 1; i < back.length; i++) {
+      const a = back[i - 1], b = back[i];
+      if (metres(a, g.g) > want || metres(b, g.g) < want) continue;
+      let lo = 0, hi = 1; // distance from the green grows along this leg, so halve the gap to find the spot
+      for (let n = 0; n < 30; n++) { const k = (lo + hi) / 2; if (metres(lerp(a, b, k), g.g) < want) lo = k; else hi = k; }
+      const p = S(lerp(a, b, lo));
       out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#ff4d4d" stroke="#000" stroke-width="1"/>` + lbl(p, mark, 9, 4, "start", "mk"); break;
     }
   }
@@ -1170,7 +1175,7 @@ function hmBottom_(){
     <button class="rb${ui.gps ? " on" : ""}" data-act="${ui.gps ? "gpsoff" : "gpson"}">GPS ${ui.gps ? "on" : "off"}</button></div>`;
   html += hm.target
     ? `<div class="row" style="justify-content:space-between"><span>Target: <b class="tg">${D(metres(near ? from : g.t, hm.target))} ${u}</b> from ${near ? "you" : "the tee"}, <b class="tg">${D(metres(hm.target, g.g))} ${u}</b> to the middle</span><button class="rb" data-act="hmclear">Clear</button></div>`
-    : `<span style="opacity:.7">Tap the photo to measure to any point. Red dots mark 100, 150, 200 and 250 ${u} to the middle of the green.</span>`;
+    : `<span style="opacity:.7">Tap the photo to measure to any point. Red dots mark 100, 150, 200 and 250 ${u} to the middle of the green, as the crow flies.</span>`;
   el.innerHTML = html;
 }
 // Redraw when the photo area changes size (phone rotated, or the panel below grows).
