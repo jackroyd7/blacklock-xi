@@ -173,6 +173,9 @@ table{border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-num
 .list th,.list td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .list th:first-child,.list td:first-child{text-align:left}
 .list thead th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+/* Players tab: long names wrap so every column fits on a phone */
+.ptable td:first-child{white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+@media (max-width:520px){.ptable th,.ptable td{padding:7px 4px}.ptable th:first-child,.ptable td:first-child{padding-left:8px}.ptable th:last-child,.ptable td:last-child{padding-right:8px}.ptable{font-size:.8rem}}
 .list tr.click{cursor:pointer} .list tr.click:hover td{background:var(--surface2)}
 .teamgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px}
 .teamcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;min-width:0}
@@ -342,7 +345,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.16";
+const BUILD = "2026-10-14.17";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -808,7 +811,7 @@ function renderPlayers(){
   const card = T => {
     const rows = sortedPlayers(T).map(([id, p]) => { const r = playerRecord(id);
       return `<tr class="click" data-act="profile" data-id="${id}"><td>${esc(p.name)}${captBadge(p)}</td><td>${fmtIndex(p.index)}</td>${[1,2,3,4].map(n => `<td>${fmtHcp(roundHcp(id, n))}${hcpOverride(id, n) != null ? "*" : ""}</td>`).join("")}<td>${r.W}-${r.H}-${r.L}</td><td><b>${half(r.pts)}</b></td></tr>`; }).join("");
-    return `<div class="teamcard"><h3 style="background:var(--t${T.toLowerCase()})">${esc(teamName(T))}</h3><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th><th>Index</th>${[1,2,3,4].map(n => `<th title="${esc(roundLabel(n))}">R${n}</th>`).join("")}<th>W-H-L</th><th>Pts</th></tr></thead><tbody>${rows || `<tr><td colspan="8" class="hint">No players</td></tr>`}</tbody></table></div></div>`;
+    return `<div class="teamcard"><h3 style="background:var(--t${T.toLowerCase()})">${esc(teamName(T))}</h3><div class="scroll"><table class="list ptable" style="width:100%"><thead><tr><th>Player</th><th>Index</th>${[1,2,3,4].map(n => `<th title="${esc(roundLabel(n))}">R${n}</th>`).join("")}<th>W-H-L</th><th>Pts</th></tr></thead><tbody>${rows || `<tr><td colspan="8" class="hint">No players</td></tr>`}</tbody></table></div></div>`;
   };
   $app.innerHTML = `<h2 class="sec">Players</h2><p class="lead">Tap a player for their profile, matches and scorecards. Captains are listed first. R1–R4 show each player's course handicap for that round from the tees it's played off (* = entered by hand). Pts counts the points won by matches they played in.</p><div class="teamgrid">${card("A")}${card("B")}</div>`;
 }
