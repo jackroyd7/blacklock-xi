@@ -230,7 +230,9 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .hm .rb{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:8px;padding:8px 12px;font-weight:700;min-width:40px}
 .hm .rb:disabled{opacity:.35}
 .hm .rb.on{background:#2f8f5b}
-.hmmap{position:relative;overflow:hidden;background:#1b2a20;touch-action:manipulation}
+.hmmap{position:relative;overflow:hidden;background:#1b2a20;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.hmmap .hmfit{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6)}
+.hm{touch-action:none}
 .hmmap .tiles{position:absolute;left:0;top:0;transform-origin:0 0}
 .hmmap .tiles img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;-webkit-user-drag:none}
 .hmmap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -311,7 +313,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.4";
+const BUILD = "2026-10-14.5";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -969,9 +971,10 @@ function gpsDist(g, h){
 function ordinal(n){ const s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" })[n % 10] || "th"; return n + s; }
 
 // The viewer draws the photo itself so it can turn it: tee at the bottom, green at the top.
-const hm = { open: false, k: "tour", h: 1, target: null, view: null };
+// zoom: the viewer's own pinch/pan on top of the fitted view (screen = fitted × k + (x, y)).
+const hm = { open: false, k: "tour", h: 1, target: null, view: null, zoom: { k: 1, x: 0, y: 0 }, dragged: false };
 function hmOpen(k, h){
-  Object.assign(hm, { open: true, k, h: Math.min(18, Math.max(1, h)), target: null });
+  Object.assign(hm, { open: true, k, h: Math.min(18, Math.max(1, h)), target: null, zoom: { k: 1, x: 0, y: 0 } });
   const el = document.getElementById("hm"); el.hidden = false;
   hmShell(); requestAnimationFrame(hmDraw); gpsSync();
 }
@@ -979,13 +982,17 @@ function hmClose(){ if (hmResize) hmResize.disconnect(); hm.open = false; hm.vie
 function hmShell(){
   const c = course(hm.k), h = hm.h;
   const lens = c.tees.filter(t => t.m && !/W$/.test(t.id)).map(t => `${esc(t.id)}: ${dist(t.m[h-1])}`).join(" · ");
-  document.getElementById("hm").innerHTML = `<div class="hm" role="dialog" aria-modal="true" aria-label="Map of hole ${h}">
+  const el = document.getElementById("hm");
+  el.innerHTML = `<div class="hm" role="dialog" aria-modal="true" aria-label="Map of hole ${h}">
     <div class="hmtop"><button class="rb" data-act="hmclose" aria-label="Close">✕</button>
       <b>Hole ${h}</b><span class="meta">${esc(c.name)} · Par ${c.par[h-1]} · SI ${c.si[h-1]}<br>Tees ${lens} ${unitLabel()}</span>
       <button class="rb" data-act="hmgo" data-d="-1" ${h === 1 ? "disabled" : ""} aria-label="Previous hole">‹</button>
       <button class="rb" data-act="hmgo" data-d="1" ${h === 18 ? "disabled" : ""} aria-label="Next hole">›</button></div>
     <div class="hmmap" id="hmmap" data-act="hmtap"></div>
     <div class="hmbot" id="hmbot"></div></div>`;
+  hmGestures(document.getElementById("hmmap"));
+  // Safari's own pinch-zoom of the page
+  el.firstElementChild.addEventListener("gesturestart", e => e.preventDefault());
 }
 function hmDraw(){
   const box = document.getElementById("hmmap"); if (!box) return;
@@ -1001,22 +1008,81 @@ function hmDraw(){
   const rp = [g.t, g.d, g.f, g.b, g.g].filter(Boolean).map(rel), xs = rp.map(p => p[0]), ys = rp.map(p => p[1]);
   const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
   const s = Math.min(2, (W - 100) / Math.max(1, Math.max(...xs) - Math.min(...xs)), (H - 80) / Math.max(1, Math.max(...ys) - Math.min(...ys)));
-  const z = Math.max(3, Math.min(Z, Math.floor(Z + Math.log2(s)))), f = 2 ** (Z - z), n = 2 ** z;
-  // Tiles covering the screen at any rotation, positioned relative to a nearby origin to keep CSS numbers small.
-  const cw = rot(cx, cy, ang), Cz = [(T[0] + cw[0]) / f, (T[1] + cw[1]) / f], R = Math.hypot(W, H) / 2 / s / f + 8;
-  const x0 = Math.floor((Cz[0] - R) / 256), x1 = Math.floor((Cz[0] + R) / 256), y0 = Math.floor((Cz[1] - R) / 256), y1 = Math.floor((Cz[1] + R) / 256);
-  let imgs = "";
-  for (let tx = x0; tx <= x1; tx++) for (let ty = Math.max(0, y0); ty <= Math.min(n - 1, y1); ty++)
-    imgs += `<img src="${TILE_URL(z, ((tx % n) + n) % n, ty)}" style="left:${(tx - x0) * 256}px;top:${(ty - y0) * 256}px" alt="" draggable="false">`;
-  const tf = `translate(${W / 2}px,${H / 2}px) scale(${s}) translate(${-cx}px,${-cy}px) rotate(${-ang}rad) translate(${x0 * 256 * f - T[0]}px,${y0 * 256 * f - T[1]}px) scale(${f})`;
-  box.innerHTML = `<div class="tiles" style="transform:${tf}">${imgs}</div><svg id="hmsvg" aria-hidden="true"></svg><span class="attr">${TILE_ATTR}</span>`;
-  hm.view = { g, W, H,
-    toScreen: p => { const r = rel(p); return [W / 2 + (r[0] - cx) * s, H / 2 + (r[1] - cy) * s]; },
-    fromScreen: (sx, sy) => { const r = rot((sx - W / 2) / s + cx, (sy - H / 2) / s + cy, ang); return wll(T[0] + r[0], T[1] + r[1], Z); },
-    pxPerM: s / (156543.03392 * Math.cos(g.g[0] * Math.PI / 180) / 2 ** Z) };
+  box.innerHTML = `<svg id="hmsvg" aria-hidden="true"></svg><span class="attr">${TILE_ATTR}</span><button class="rb hmfit" data-act="hmfit" hidden>Fit hole</button>`;
+  hm.view = { g, W, H, T, ang, rel, s, cx, cy, layer: null,
+    pxPerM0: 1 / (156543.03392 * Math.cos(g.g[0] * Math.PI / 180) / 2 ** Z) };
   hm.size = W + "x" + H;
   if (hmResize) { hmResize.disconnect(); hmResize.observe(box); }
+  hmLayout(true);
+}
+// Applies the current zoom. With tiles=true it also loads photo tiles at the right detail for that zoom;
+// during a pinch only the existing photo is stretched, and sharper tiles load once the fingers lift.
+function hmLayout(tiles){
+  const v = hm.view, box = document.getElementById("hmmap"); if (!v || !box) return;
+  const { W, H, T, ang, rel, cx, cy } = v, Z = MAX_Z, zm = hm.zoom;
+  const S = v.s * zm.k, Ox = W / 2 * zm.k + zm.x, Oy = H / 2 * zm.k + zm.y;
+  v.toScreen = p => { const r = rel(p); return [Ox + (r[0] - cx) * S, Oy + (r[1] - cy) * S]; };
+  v.fromScreen = (sx, sy) => { const r = rot((sx - Ox) / S + cx, (sy - Oy) / S + cy, ang); return wll(T[0] + r[0], T[1] + r[1], Z); };
+  v.pxPerM = S * v.pxPerM0;
+  const tf = l => `translate(${Ox}px,${Oy}px) scale(${S}) translate(${-cx}px,${-cy}px) rotate(${-ang}rad) translate(${l.x0 * 256 * l.f - T[0]}px,${l.y0 * 256 * l.f - T[1]}px) scale(${l.f})`;
+  if (tiles || !v.layer) {
+    const z = Math.max(3, Math.min(Z, Math.floor(Z + Math.log2(S)))), f = 2 ** (Z - z), n = 2 ** z;
+    // Tiles covering the screen at any rotation, positioned relative to a nearby origin to keep CSS numbers small.
+    const vc = rot((W / 2 - Ox) / S + cx, (H / 2 - Oy) / S + cy, ang), Cz = [(T[0] + vc[0]) / f, (T[1] + vc[1]) / f], R = Math.hypot(W, H) / 2 / S / f + 8;
+    const l = { z, f, x0: Math.floor((Cz[0] - R) / 256), y0: Math.floor((Cz[1] - R) / 256) };
+    const x1 = Math.floor((Cz[0] + R) / 256), y1 = Math.floor((Cz[1] + R) / 256);
+    let imgs = "";
+    for (let tx = l.x0; tx <= x1; tx++) for (let ty = Math.max(0, l.y0); ty <= Math.min(n - 1, y1); ty++)
+      imgs += `<img src="${TILE_URL(z, ((tx % n) + n) % n, ty)}" style="left:${(tx - l.x0) * 256}px;top:${(ty - l.y0) * 256}px" alt="" draggable="false">`;
+    const div = document.createElement("div"); div.className = "tiles"; div.innerHTML = imgs; l.el = div;
+    // Keep the previous photo underneath until the new tiles have had a moment to load, so it never flashes blank.
+    const old = [...box.querySelectorAll(".tiles")];
+    box.insertBefore(div, box.querySelector("svg"));
+    if (old.length) setTimeout(() => old.forEach(o => o.remove()), 900);
+    v.layers = [l, ...(old.length && v.layers ? v.layers.filter(x => old.includes(x.el)) : [])];
+    v.layer = l;
+  }
+  for (const l of v.layers) l.el.style.transform = tf(l);
+  const fit = box.querySelector(".hmfit"); if (fit) fit.hidden = zm.k === 1 && !zm.x && !zm.y;
   hmOverlay();
+}
+// One finger drags the photo, two fingers pinch-zoom it, the mouse wheel or a trackpad pinch zooms it.
+function hmGestures(box){
+  const pts = new Map(); let start = null, settle = null;
+  const local = e => { const r = box.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const centre = () => { const a = [...pts.values()]; return a.length > 1 ? { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) } : { x: a[0].x, y: a[0].y, d: 0 }; };
+  const begin = () => { start = Object.assign(centre(), { z: Object.assign({}, hm.zoom) }); };
+  const kMax = () => hm.view ? Math.max(1, 6 / hm.view.s) : 1;
+  // Zoom to k keeping the photo point that was under `from` (at the start zoom) under `to`.
+  const zoomTo = (z0, from, to, k) => {
+    k = Math.min(kMax(), Math.max(0.5, k));
+    const bx = (from.x - z0.x) / z0.k, by = (from.y - z0.y) / z0.k;
+    hm.zoom = { k, x: to.x - bx * k, y: to.y - by * k };
+  };
+  const later = () => { clearTimeout(settle); settle = setTimeout(() => hmLayout(true), 250); };
+  box.addEventListener("pointerdown", e => {
+    if (!hm.view || e.target.closest("button")) return;
+    box.setPointerCapture(e.pointerId);
+    if (!pts.size) hm.dragged = false;
+    pts.set(e.pointerId, local(e)); if (pts.size > 1) hm.dragged = true;
+    clearTimeout(settle); begin();
+  });
+  box.addEventListener("pointermove", e => {
+    if (!pts.has(e.pointerId) || !start) return;
+    pts.set(e.pointerId, local(e));
+    const c = centre();
+    if (Math.hypot(c.x - start.x, c.y - start.y) > 8) hm.dragged = true;
+    if (!hm.dragged) return;
+    zoomTo(start.z, start, c, c.d && start.d ? start.z.k * c.d / start.d : start.z.k);
+    hmLayout(false);
+  });
+  const end = e => { if (!pts.delete(e.pointerId)) return; if (pts.size) begin(); else { start = null; if (hm.dragged) later(); } };
+  box.addEventListener("pointerup", end); box.addEventListener("pointercancel", end);
+  box.addEventListener("wheel", e => {
+    if (!hm.view) return; e.preventDefault();
+    const p = local(e); zoomTo(hm.zoom, p, p, hm.zoom.k * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.002)));
+    hmLayout(false); later();
+  }, { passive: false });
 }
 function hmOverlay(){
   const svg = document.getElementById("hmsvg"), v = hm.view; if (!svg || !v) return;
@@ -1791,8 +1857,9 @@ document.addEventListener("click", e => {
     case "restore": doRestore(el); break;
     case "hmopen": hmOpen(el.dataset.k, +el.dataset.h); break;
     case "hmclose": hmClose(); break;
-    case "hmgo": { const h = hm.h + +el.dataset.d; if (h >= 1 && h <= 18) { hm.h = h; hm.target = null; hmShell(); hmDraw(); } break; }
-    case "hmtap": { if (!hm.view) break; const r = el.getBoundingClientRect(); hm.target = hm.view.fromScreen(e.clientX - r.left, e.clientY - r.top); hmOverlay(); hmBottom(); break; }
+    case "hmgo": { const h = hm.h + +el.dataset.d; if (h >= 1 && h <= 18) { hm.h = h; hm.target = null; hm.zoom = { k: 1, x: 0, y: 0 }; hmShell(); hmDraw(); } break; }
+    case "hmfit": hm.zoom = { k: 1, x: 0, y: 0 }; hmLayout(true); break;
+    case "hmtap": { if (!hm.view || hm.dragged) { hm.dragged = false; break; } const r = el.getBoundingClientRect(); hm.target = hm.view.fromScreen(e.clientX - r.left, e.clientY - r.top); hmOverlay(); hmBottom(); break; }
     case "hmclear": hm.target = null; hmOverlay(); hmBottom(); break;
     case "gpson": gpsSet(true); break;
     case "gpsoff": gpsSet(false); break;
