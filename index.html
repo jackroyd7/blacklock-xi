@@ -231,6 +231,9 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .hm .rb:disabled{opacity:.35}
 .hm .rb.on{background:#2f8f5b}
 .hmmap{position:relative;overflow:hidden;background:#1b2a20;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.hmu{display:inline-flex;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.16)}
+.hmu button{border:0;background:none;color:#fff;padding:8px 11px;font-weight:700}
+.hmu button[aria-pressed="true"]{background:#2f8f5b}
 .hmmap .hmfit{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6)}
 .hm{touch-action:none}
 .hmmap .tiles{position:absolute;left:0;top:0;transform-origin:0 0}
@@ -313,7 +316,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.5";
+const BUILD = "2026-10-14.6";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -382,7 +385,7 @@ function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;",
 function half(n){ const w = Math.floor(n), h = Math.abs(n - w) > 0.01; return (w === 0 && h) ? "½" : (w + (h ? "½" : "")); }
 function sum(a){ return a.reduce((s, x) => s + (+x || 0), 0); }
 function loadUi(){ try { return JSON.parse(localStorage.getItem("blacklock-ui") || "{}"); } catch { return {}; } }
-function saveUi(){ try { localStorage.setItem("blacklock-ui", JSON.stringify({ unit: ui.unit, cc: ui.cc, tab: ui.tab, match: ui.match, player: ui.player, calc: ui.calc, unlocked: ui.unlocked, gps: ui.gps })); } catch {} }
+function saveUi(){ try { localStorage.setItem("blacklock-ui", JSON.stringify({ unit: ui.unit, hmUnit: ui.hmUnit, cc: ui.cc, tab: ui.tab, match: ui.match, player: ui.player, calc: ui.calc, unlocked: ui.unlocked, gps: ui.gps })); } catch {} }
 let toastT; function toast(msg){ $toast.textContent = msg; $toast.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => $toast.hidden = true, 2600); }
 function mergeEvent(d){
   const e = clone(DEFAULT_EVENT); if (!d) return e;
@@ -416,8 +419,11 @@ function sname(id){
 function sortedPlayers(team){ return Object.entries(players).filter(([, p]) => !team || p.team === team).sort((a, b) => (team ? 0 : a[1].team.localeCompare(b[1].team)) || (!!b[1].captain - !!a[1].captain) || a[1].name.localeCompare(b[1].name)); }
 function teeShort(t){ return t.name.split(" (")[0]; }
 // Distances: stored in metres (the club's card); shown in yards unless the viewer picks metres.
-function dist(mtrs){ return ui.unit === "m" ? mtrs : Math.round(mtrs * 1.09361); }
-function unitLabel(){ return ui.unit === "m" ? "m" : "yd"; }
+// The hole map has its own units switch; while it draws, unitNow holds that choice.
+let unitNow = null;
+function curUnit(){ return unitNow || ui.unit; }
+function dist(mtrs){ return curUnit() === "m" ? mtrs : Math.round(mtrs * 1.09361); }
+function unitLabel(){ return curUnit() === "m" ? "m" : "yd"; }
 function teeLength(t){ return t.m ? `${t.m.reduce((a, x) => a + dist(x), 0).toLocaleString("en-GB")} ${unitLabel()}` : ""; }
 function captBadge(p){ return p.captain ? `<span class="capt" style="background:var(--t${p.team.toLowerCase()})" title="Captain">C</span>` : ""; }
 function applyTeamColors(){ document.documentElement.style.setProperty("--ta", ev.teams.A.color); document.documentElement.style.setProperty("--tb", ev.teams.B.color); }
@@ -973,19 +979,26 @@ function ordinal(n){ const s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st
 // The viewer draws the photo itself so it can turn it: tee at the bottom, green at the top.
 // zoom: the viewer's own pinch/pan on top of the fitted view (screen = fitted × k + (x, y)).
 const hm = { open: false, k: "tour", h: 1, target: null, view: null, zoom: { k: 1, x: 0, y: 0 }, dragged: false };
+function hmUnit(){ return ui.hmUnit || ui.unit || "yd"; }
+function inHmUnits(fn){ unitNow = hmUnit(); try { return fn(); } finally { unitNow = null; } }
+function hmMeta(){
+  const c = course(hm.k), h = hm.h;
+  const lens = c.tees.filter(t => t.m && !/W$/.test(t.id)).map(t => `${esc(t.id)}: ${dist(t.m[h-1])}`).join(" · ");
+  return `${esc(c.name)} · Par ${c.par[h-1]} · SI ${c.si[h-1]}<br>Tees ${lens} ${unitLabel()}`;
+}
 function hmOpen(k, h){
   Object.assign(hm, { open: true, k, h: Math.min(18, Math.max(1, h)), target: null, zoom: { k: 1, x: 0, y: 0 } });
   const el = document.getElementById("hm"); el.hidden = false;
   hmShell(); requestAnimationFrame(hmDraw); gpsSync();
 }
 function hmClose(){ if (hmResize) hmResize.disconnect(); hm.open = false; hm.view = null; const el = document.getElementById("hm"); el.hidden = true; el.innerHTML = ""; gpsSync(); }
-function hmShell(){
-  const c = course(hm.k), h = hm.h;
-  const lens = c.tees.filter(t => t.m && !/W$/.test(t.id)).map(t => `${esc(t.id)}: ${dist(t.m[h-1])}`).join(" · ");
+function hmShell(){ return inHmUnits(hmShell_); }
+function hmShell_(){
+  const h = hm.h;
   const el = document.getElementById("hm");
   el.innerHTML = `<div class="hm" role="dialog" aria-modal="true" aria-label="Map of hole ${h}">
     <div class="hmtop"><button class="rb" data-act="hmclose" aria-label="Close">✕</button>
-      <b>Hole ${h}</b><span class="meta">${esc(c.name)} · Par ${c.par[h-1]} · SI ${c.si[h-1]}<br>Tees ${lens} ${unitLabel()}</span>
+      <b>Hole ${h}</b><span class="meta" id="hmmeta">${hmMeta()}</span>
       <button class="rb" data-act="hmgo" data-d="-1" ${h === 1 ? "disabled" : ""} aria-label="Previous hole">‹</button>
       <button class="rb" data-act="hmgo" data-d="1" ${h === 18 ? "disabled" : ""} aria-label="Next hole">›</button></div>
     <div class="hmmap" id="hmmap" data-act="hmtap"></div>
@@ -1084,7 +1097,8 @@ function hmGestures(box){
     hmLayout(false); later();
   }, { passive: false });
 }
-function hmOverlay(){
+function hmOverlay(){ return inHmUnits(hmOverlay_); }
+function hmOverlay_(){
   const svg = document.getElementById("hmsvg"), v = hm.view; if (!svg || !v) return;
   const g = v.g, S = v.toScreen, u = unitLabel();
   const lbl = (p, txt, dx = 9, dy = 4, anchor = "start", cls = "") => `<text class="lbl ${cls}" x="${p[0] + dx}" y="${p[1] + dy}" text-anchor="${anchor}">${txt}</text>`;
@@ -1095,7 +1109,7 @@ function hmOverlay(){
   // Distance markers measured back from the middle of the green along the line of play.
   const back = [...route].reverse(), segs = back.slice(1).map((p, i) => [back[i], p, metres(back[i], p)]), total = sum(segs.map(x => x[2]));
   for (const mark of [100, 150, 200, 250]) {
-    let rest = ui.unit === "m" ? mark : mark / 1.09361; if (rest > total - 25) continue;
+    let rest = curUnit() === "m" ? mark : mark / 1.09361; if (rest > total - 25) continue;
     for (const [a, b, len] of segs) {
       if (rest > len) { rest -= len; continue; }
       const A = S(a), B = S(b), k = rest / len, p = [A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k];
@@ -1125,7 +1139,8 @@ function hmOverlay(){
   }
   svg.innerHTML = out;
 }
-function hmBottom(){
+function hmBottom(){ return inHmUnits(hmBottom_); }
+function hmBottom_(){
   const el = document.getElementById("hmbot"); if (!el) return;
   const g = holeGeo(hm.k, hm.h), u = unitLabel(); if (!g) { el.innerHTML = ""; return; }
   const near = nearGreen(g), from = near ? gps.pos : null;
@@ -1136,7 +1151,9 @@ function hmBottom(){
   const status = near ? `GPS · accurate to about ${D(gps.acc)} ${u}`
     : ui.gps ? (gps.err || (gps.pos ? `GPS on · you're ${farTxt(metres(gps.pos, g.g))} from this green, so distances are from the tee marker.` : "Finding your position…"))
     : "Distances from the tee marker. Turn on GPS for distances from where you are.";
+  const hu = hmUnit();
   html += `<div class="row" style="justify-content:space-between"><span style="flex:1;min-width:0;opacity:.85">${esc(status)}</span>
+    <span class="hmu" role="group" aria-label="Distance units on the hole map"><button data-act="hmunit" data-u="yd" aria-pressed="${hu !== "m"}">yd</button><button data-act="hmunit" data-u="m" aria-pressed="${hu === "m"}">m</button></span>
     <button class="rb${ui.gps ? " on" : ""}" data-act="${ui.gps ? "gpsoff" : "gpson"}">GPS ${ui.gps ? "on" : "off"}</button></div>`;
   html += hm.target
     ? `<div class="row" style="justify-content:space-between"><span>Target: <b class="tg">${D(metres(near ? from : g.t, hm.target))} ${u}</b> from ${near ? "you" : "the tee"}, <b class="tg">${D(metres(hm.target, g.g))} ${u}</b> to the middle</span><button class="rb" data-act="hmclear">Clear</button></div>`
@@ -1858,6 +1875,7 @@ document.addEventListener("click", e => {
     case "hmopen": hmOpen(el.dataset.k, +el.dataset.h); break;
     case "hmclose": hmClose(); break;
     case "hmgo": { const h = hm.h + +el.dataset.d; if (h >= 1 && h <= 18) { hm.h = h; hm.target = null; hm.zoom = { k: 1, x: 0, y: 0 }; hmShell(); hmDraw(); } break; }
+    case "hmunit": ui.hmUnit = el.dataset.u; saveUi(); { const m = document.getElementById("hmmeta"); if (m) m.innerHTML = inHmUnits(hmMeta); } hmOverlay(); hmBottom(); break;
     case "hmfit": hm.zoom = { k: 1, x: 0, y: 0 }; hmLayout(true); break;
     case "hmtap": { if (!hm.view || hm.dragged) { hm.dragged = false; break; } const r = el.getBoundingClientRect(); hm.target = hm.view.fromScreen(e.clientX - r.left, e.clientY - r.top); hmOverlay(); hmBottom(); break; }
     case "hmclear": hm.target = null; hmOverlay(); hmBottom(); break;
