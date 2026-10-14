@@ -40,6 +40,12 @@ Once a hole is mapped:
 
 The photos are Esri World Imagery. The points are saved in the event document, so they're included in the full backup.
 
+## Using it with no signal
+- **Install it:** on iPhone, open the link in Safari, tap Share, then **Add to Home Screen**. On Android, use the browser menu, then **Install app**. It then opens full screen and works with no signal. On iPhone this also stops Safari clearing the saved data after a week of not opening it.
+- **The app:** after it has been opened once with signal, a copy stays on the phone (`sw.js`), so it opens anywhere. New versions still arrive when there's signal, with the Update bar.
+- **Scores:** scores entered with no signal are kept on the phone and sent when signal returns. Other groups' scores arrive when you have signal.
+- **Hole maps:** **Course tab → Download hole maps for offline** saves the satellite photos for every mapped hole (roughly 30 MB for both courses), so do it on wifi before the first round. Download again if holes are mapped or moved later. GPS distances work with no signal.
+
 ## Other screens
 - **Live** tab: every hole as it is scored in any match, newest first, with where each match stands. Tap one to open the match. Only holes scored with this version of the app appear.
 - **Match graph** (on each match): who was up after every hole.
