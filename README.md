@@ -31,6 +31,21 @@ Repository **Settings → Pages → Build and deployment → Deploy from a branc
    - Stadium, yellow: slope 148, rating 73.2
 4. Set the **Pairings** for each round (they can be done round by round).
 
+## Hole maps and GPS distances
+**Setup → Hole maps → Open the hole map editor** (behind the PIN). For each hole, tap the tee and the middle of the green on the satellite photo. Front of green, back of green and a dogleg corner are optional. Drag a marker to move it, then **Save hole**, which moves on to the next hole. The editor shows the measured tee-to-green length next to the card length as a check. It takes about 10 minutes per course and is easiest on a laptop or tablet.
+
+Once a hole is mapped:
+- **Course tab:** tap a hole number for a satellite view turned so the tee is at the bottom and the green at the top, with 100/150/200/250 markers to the green. Tap anywhere on the photo to measure to that point.
+- **Scoring screen:** a **Hole map** button, and (once someone turns GPS on) the distance from their phone to the front, middle and back of the green. GPS distances only appear within 600 m of the green and are off until each person turns them on.
+
+The photos are Esri World Imagery. The points are saved in the event document, so they're included in the full backup.
+
+## Other screens
+- **Latest** (top of the Scoreboard): the most recent holes scored in any match and where each match stands. Tap one to open the match. Only holes scored with this version of the app appear.
+- **Match graph** (on each match): who was up after every hole.
+- **Stats:** awards (top points scorer, most holes won, birdies and net birdies, biggest win, best comeback, best partnership), player stats, partnerships and how each hole played against par.
+- **Share as image:** tap the overall score, then **Share as image** and **Share image** to send the score card to WhatsApp or save it.
+
 ## Formats and handicaps
 | Round | Format | Course | Points per match |
 |---|---|---|---|

@@ -36,11 +36,11 @@ button{cursor:pointer}
 .num{font-variant-numeric:tabular-nums}
 
 .top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
-.top .wrap{padding-block:10px 0;display:grid;gap:8px}
-.evline{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.top .wrap{padding-block:10px 0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.evline{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 12px}
 .evname{font-family:var(--display);font-weight:700;font-size:1.35rem;letter-spacing:.02em;text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .evname small{font-family:var(--body);font-weight:500;font-size:.75rem;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
-.evmeta{font-size:.78rem;color:var(--muted);white-space:nowrap}
+.evmeta{font-size:.78rem;color:var(--muted);white-space:nowrap;flex-shrink:0}
 .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:5px;vertical-align:1px}
 .board{display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:var(--r);overflow:hidden;cursor:pointer}
 .board:hover .big{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
@@ -222,6 +222,63 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .sc .tee td:first-child{font-weight:600}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
 
+/* Hole maps: a satellite photo turned so the tee is at the bottom and the green at the top. */
+.hm{position:fixed;inset:0;z-index:42;background:#000;color:#fff;display:grid;grid-template-rows:auto 1fr auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.hm .hmtop{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(0,0,0,.85)}
+.hm .hmtop b{font-family:var(--display);font-size:1.5rem;line-height:1;text-transform:uppercase;letter-spacing:.03em}
+.hm .hmtop .meta{font-size:.8rem;opacity:.8;flex:1;min-width:0}
+.hm .rb{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:8px;padding:8px 12px;font-weight:700;min-width:40px}
+.hm .rb:disabled{opacity:.35}
+.hm .rb.on{background:#2f8f5b}
+.hmmap{position:relative;overflow:hidden;background:#1b2a20;touch-action:manipulation}
+.hmmap .tiles{position:absolute;left:0;top:0;transform-origin:0 0}
+.hmmap .tiles img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;-webkit-user-drag:none}
+.hmmap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.hmmap .lbl{font:700 13px var(--body);fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:3px}
+.hmmap .attr{position:absolute;right:4px;bottom:2px;font-size:.6rem;opacity:.7;pointer-events:none}
+.hmmap .none{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:24px;color:#cfd8d2;gap:8px}
+.hm .hmbot{display:grid;gap:6px;padding:8px 10px 10px;background:rgba(0,0,0,.85);font-size:.85rem}
+.yd{display:flex;gap:6px;align-items:stretch}
+.yd div{flex:1;text-align:center;background:rgba(255,255,255,.1);border-radius:8px;padding:4px 2px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;opacity:.95}
+.yd div b{display:block;font-family:var(--display);font-size:1.7rem;line-height:1.05;letter-spacing:0}
+.yd div.mid{background:rgba(47,143,91,.55)}
+.gpsline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.85rem;background:var(--surface2);border-radius:8px;padding:6px 10px}
+.gpsline b{font-family:var(--display);font-size:1.3rem}
+.ge{position:fixed;inset:0;z-index:43;background:var(--bg);display:grid;grid-template-rows:auto auto 1fr auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.ge .gerow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line)}
+.ge .gerow select,.ge .gerow input{width:auto;flex:1 1 8rem}
+.ge #gemap{min-height:200px}
+.ge .modes button{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:5px 10px;font-weight:600;font-size:.8rem}
+.ge .modes button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ge .modes button.set::after{content:" ✓";color:var(--accent)}
+.ge .modes button[aria-pressed="true"].set::after{color:inherit}
+.hdone{display:grid;grid-template-columns:repeat(9,1fr);gap:3px;width:100%}
+.hdone button{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:3px 0;font-size:.75rem;font-weight:700}
+.hdone button.ok{background:var(--accent);color:var(--bg);border-color:transparent}
+.hdone button.cur{outline:2px solid var(--ink);outline-offset:1px}
+.hmstrip{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
+.hmstrip button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 0;font-weight:700;font-size:.8rem;line-height:1.1}
+.hmstrip button small{display:block;font-weight:500;font-size:.62rem;color:var(--muted)}
+.hmstrip button.nomap{opacity:.55}
+
+/* Match graph, feed, stats */
+.worm{padding:10px 12px 6px}
+.worm svg{display:block;width:100%;height:auto;overflow:visible}
+.worm .tip{font-size:.8rem;color:var(--muted);min-height:1.3em}
+.feed{display:grid}
+.feed button{display:grid;grid-template-columns:4px 1fr auto;gap:10px;align-items:center;border:0;border-top:1px solid var(--line);background:none;padding:8px 12px;text-align:left}
+.feed button:first-child{border-top:0}
+.feed .stripe{align-self:stretch;border-radius:2px}
+.feed .w{font-weight:600;font-size:.88rem;line-height:1.3}
+.feed .w small{display:block;font-weight:500;color:var(--muted);font-size:.74rem}
+.feed .ago{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.award{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:2px;align-content:start;border-top:4px solid var(--line)}
+.award .k{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.award .v{font-family:var(--display);font-weight:700;font-size:1.3rem;line-height:1.15}
+.award .d{font-size:.8rem;color:var(--muted)}
+.scard .share{display:flex;justify-content:center;padding:0 14px 14px}
+
 @media (max-width:520px){
   .big{font-size:2.5rem}
   .mrow{grid-template-columns:1fr 78px 1fr}
@@ -242,6 +299,8 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <div class="toast" id="toast" hidden></div>
 <div class="update" id="update" hidden><span>A new version of the scoreboard is available.</span><button class="btn pri" data-act="update">Update</button></div>
 <div id="modal"></div>
+<div id="hm" hidden></div>
+<div id="ge" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -249,7 +308,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-13.4";
+const BUILD = "2026-10-14.1";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -318,7 +377,7 @@ function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;",
 function half(n){ const w = Math.floor(n), h = Math.abs(n - w) > 0.01; return (w === 0 && h) ? "½" : (w + (h ? "½" : "")); }
 function sum(a){ return a.reduce((s, x) => s + (+x || 0), 0); }
 function loadUi(){ try { return JSON.parse(localStorage.getItem("blacklock-ui") || "{}"); } catch { return {}; } }
-function saveUi(){ try { localStorage.setItem("blacklock-ui", JSON.stringify({ unit: ui.unit, cc: ui.cc, tab: ui.tab, match: ui.match, player: ui.player, calc: ui.calc, unlocked: ui.unlocked })); } catch {} }
+function saveUi(){ try { localStorage.setItem("blacklock-ui", JSON.stringify({ unit: ui.unit, cc: ui.cc, tab: ui.tab, match: ui.match, player: ui.player, calc: ui.calc, unlocked: ui.unlocked, gps: ui.gps })); } catch {} }
 let toastT; function toast(msg){ $toast.textContent = msg; $toast.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => $toast.hidden = true, 2600); }
 function mergeEvent(d){
   const e = clone(DEFAULT_EVENT); if (!d) return e;
@@ -508,6 +567,7 @@ function onWriteError(e){
 function queueScore(mid, h, key, val){
   if (blocked()) return;
   pending[mid] = pending[mid] || {}; pending[mid][h] = pending[mid][h] || {}; pending[mid][h][key] = val;
+  if (val != null) pending[mid][h].t = Date.now(); // when the hole was last scored, for the Latest feed
   render();
   clearTimeout(timers[mid]); timers[mid] = setTimeout(() => flush(mid), 450);
 }
@@ -556,7 +616,7 @@ function renderHeader(){
       <i style="right:0;width:${pct(t.B.won)};background:var(--tb)"></i>
       <i class="mid"></i>
     </div>
-    <nav class="tabs">${tab("board","Scoreboard")}${tab("players","Players")}${tab("shots","Shots")}${tab("course","Course")}${tab("setup","Setup")}</nav>`;
+    <nav class="tabs">${tab("board","Scoreboard")}${tab("players","Players")}${tab("stats","Stats")}${tab("shots","Shots")}${tab("course","Course")}${tab("setup","Setup")}</nav>`;
 }
 
 // ---------- scoreboard ----------
@@ -582,6 +642,7 @@ function renderBoard(){
   let html = "";
   if (noDb) html += `<div class="notice"><b>Not connected.</b> Scores can't load until the Firebase settings are added to <code>config.js</code>. See the README.</div>`;
   if (!noDb && loaded.p && !Object.keys(players).length) html += `<div class="empty">No players yet. Add both teams and their handicaps in <b>Setup</b>, then set the pairings for each round. Matches appear here as soon as pairings are saved.</div>`;
+  html += renderFeed();
   ev.rounds.forEach((r, i) => {
     const rt = t.rounds[i];
     html += `<section class="round"><div class="rhead"><h2>R${i+1} · ${FORMATS[r.format].label}</h2>
@@ -636,7 +697,9 @@ function renderMatch(){
 
   const si = m.c.si[h-1], par = m.c.par[h-1], s = m.scores[h] || {}, r = st.res[h];
   const ro = noDb;
-  html += `<div class="card entry"><div class="ehead"><span class="h">Hole ${h}</span><span class="meta">Par ${par} · SI ${si}</span></div>`;
+  const geo = holeGeo(m.r.course, h);
+  html += `<div class="card entry"><div class="ehead"><span class="h">Hole ${h}</span><span class="meta">Par ${par} · SI ${si}${m.tee.m ? ` · ${dist(m.tee.m[h-1])} ${unitLabel()}` : ""}</span>${geo ? `<button class="btn" data-act="hmopen" data-k="${m.r.course}" data-h="${h}">Hole map</button>` : ""}</div>`;
+  if (geo) html += `<div class="gpsline" data-gps="${m.r.course}" data-h="${h}">${gpsLine(m.r.course, h)}</div>`;
   if (!ro) html += `<div class="quick" role="group" aria-label="Hole result">
       <button class="qa" data-act="quick" data-w="A" aria-pressed="${s.w === "A"}">${esc(teamName("A"))}<br>win hole</button>
       <button class="qh" data-act="quick" data-w="H" aria-pressed="${s.w === "H"}">Halved</button>
@@ -662,6 +725,7 @@ function renderMatch(){
   if (!ro && Object.keys(s).some(k => s[k] != null)) html += `<button class="btn danger" data-act="clearhole" style="justify-self:start">Clear hole ${h}</button>`;
   html += `</div>`;
 
+  html += matchGraph(m, st);
   html += scorecard(m, st);
   $app.innerHTML = html;
 }
@@ -740,13 +804,14 @@ function renderScores(el){
   const anyLive = Math.abs(t.A.proj - t.A.won) + Math.abs(t.B.proj - t.B.won) > 0;
   el.hidden = false;
   el.innerHTML = `<div class="modal centre" data-act="closeprofile"><div class="sheet scard" role="dialog" aria-modal="true" aria-labelledby="sc-title">
-    <div class="top"><button class="x" data-act="closeprofile" aria-label="Close">✕</button>
+    <div class="top"><button class="x" data-act="closeprofile" aria-label="Close" data-noshot>✕</button>
       <img class="crest" src="logo.png" alt="Blacklock XI crest" width="64" height="64">
       <span class="ev" id="sc-title">${esc(ev.name)} · ${esc(ev.venue)} ${esc(ev.year)}</span>
       <div class="totals"><span class="tn a">${esc(A)}</span><span class="big2">${half(t.A.won)} – ${half(t.B.won)}</span><span class="tn b">${esc(B)}</span></div>
       <span class="sub2">${status}</span></div>
     <div class="rounds">${rows}</div>
     ${anyLive ? `<div class="foot">Projected if live matches finish as they stand: ${esc(A)} ${half(t.A.proj)} – ${half(t.B.proj)} ${esc(B)}</div>` : ""}
+    <div class="share" data-noshot>${shareFile ? `<button class="btn pri" data-act="sharego">Share image</button>` : `<button class="btn" data-act="sharemake">Share as image</button>`}</div>
   </div></div>`;
 }
 function renderModal(){
@@ -829,8 +894,11 @@ function renderCourse(){
     const tees = c.tees.map(t => `<details class="tee"><summary>Tee ${esc(teeShort(t))}${t.m ? ` · ${teeLength(t)}` : ""}<span>Rating ${t.rating} · Slope ${t.slope} · Par ${sum(c.par)}</span></summary>
       <p class="hint" style="margin:6px 0">Handicap index range → course handicap${t.table ? ". This tee follows the club's printed slope sheet, which differs from the formula by up to one shot." : ""}</p>
       <div class="bands">${chBands(c, t).map(b => `<div><span>${b.from === b.to ? fmtIdx1(b.from) : `${fmtIdx1(b.from)} – ${fmtIdx1(b.to)}`}</span><b>${fmtHcp(b.ch)}</b></div>`).join("")}</div></details>`).join("");
+    const nmap = mappedCount(k);
+    const maps = `<div class="hmstrip">${H.map(i => `<button class="${holeGeo(k, i + 1) ? "" : "nomap"}" data-act="hmopen" data-k="${k}" data-h="${i + 1}" aria-label="Map of hole ${i + 1}">${i + 1}<small>Par ${c.par[i]}</small></button>`).join("")}</div>
+      <p class="hint">${nmap ? `Tap a hole for a satellite map with distances${nmap < 18 ? `. ${nmap} of 18 holes mapped so far` : ""}.` : "No hole maps yet. Organisers can add them in Setup → Hole maps."}</p>`;
     return `<section class="round"><div class="rhead"><h2>${esc(c.name)} course</h2><span class="sub">${esc(rounds)}</span></div>
-      <div style="padding:12px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px"><b>Scorecard</b>${card}<b>Tees, ratings and handicap tables</b><div>${tees}</div></div></section>`;
+      <div style="padding:12px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px"><b>Hole maps</b><div style="display:grid;gap:6px">${maps}</div><b>Scorecard</b>${card}<b>Tees, ratings and handicap tables</b><div>${tees}</div></div></section>`;
   }).join("");
   $app.innerHTML = `<div class="row" style="justify-content:space-between"><h2 class="sec">Courses &amp; handicaps</h2>
       <div class="unit" role="group" aria-label="Distance units"><button data-act="unit" data-u="yd" aria-pressed="${ui.unit !== "m"}">Yards</button><button data-act="unit" data-u="m" aria-pressed="${ui.unit === "m"}">Metres</button></div></div>
@@ -840,6 +908,479 @@ function renderCourse(){
       <div id="cc-out">${ccRows(parseIndex(ui.cc.index))}</div>
       <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), rounded, which matches Camiral's slope sheets. Stadium tee 65 uses the club's printed sheet directly, because it differs slightly from the formula. Ratings, slopes, lengths, par and stroke index come from the club's official scorecards and slope sheets.</p></div>
     ${courses}`;
+}
+
+// ---------- hole maps ----------
+// Each mapped hole stores points as [lat, lng] in the event document, under courses.<key>.geo.<hole>:
+// t tee, g middle of the green, and optionally f front, b back, d dogleg (the corner the line bends round).
+const TILE_URL = (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+const TILE_ATTR = "Imagery © Esri, Maxar, Earthstar Geographics";
+const MAX_Z = 19, NEAR = 600; // metres from the green within which GPS distances are shown
+const GEO_START = [41.866, 2.767]; // roughly Camiral, for the editor's first view
+function holeGeo(k, h){ const g = (course(k).geo || {})[h]; return g && g.t && g.g ? g : null; }
+function mappedCount(k){ let n = 0; for (let h = 1; h <= 18; h++) if (holeGeo(k, h)) n++; return n; }
+function metres(a, b){
+  const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLng = (b[1] - a[1]) * r;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(x));
+}
+// Along the line of play: via the dogleg when there is one.
+function viaLen(g, p){ return g.d ? metres(g.t, g.d) + metres(g.d, p) : metres(g.t, p); }
+function wpx(p, z){ const s = 256 * 2 ** z, sin = Math.sin(p[0] * Math.PI / 180); return [(p[1] + 180) / 360 * s, (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * s]; }
+function wll(x, y, z){ const s = 256 * 2 ** z, n = Math.PI - 2 * Math.PI * y / s; return [180 / Math.PI * Math.atan(Math.sinh(n)), x / s * 360 - 180]; }
+function rot(x, y, a){ return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; }
+function D(m){ return dist(Math.round(m)); }
+function farTxt(m){ return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${D(m)} ${unitLabel()}`; }
+
+// GPS runs only while a hole map or a match's scoring screen is open, and stops when the app is in the background.
+const gps = { watch: null, pos: null, acc: null, err: null };
+function gpsWanted(){ return !!ui.gps && document.visibilityState === "visible" && (hm.open || (ui.tab === "board" && !!ui.match)); }
+function gpsSync(){
+  if (!navigator.geolocation) { if (ui.gps) gps.err = "This browser can't share its location."; return; }
+  if (gpsWanted() && gps.watch == null) {
+    gps.watch = navigator.geolocation.watchPosition(
+      p => { gps.pos = [p.coords.latitude, p.coords.longitude]; gps.acc = p.coords.accuracy; gps.err = null; gpsUpdate(); },
+      e => { gps.err = e.code === 1 ? "Location is blocked for this site. Allow it in your phone's browser settings." : "Can't get a GPS fix yet."; gpsUpdate(); },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 });
+  } else if (!gpsWanted() && gps.watch != null) { navigator.geolocation.clearWatch(gps.watch); gps.watch = null; }
+}
+function gpsSet(on){ ui.gps = on; saveUi(); if (!on) { gps.pos = null; gps.err = null; } gpsSync(); gpsUpdate(); }
+function gpsUpdate(){
+  document.querySelectorAll("[data-gps]").forEach(el => el.innerHTML = gpsLine(el.dataset.gps, +el.dataset.h));
+  if (hm.open) { hmOverlay(); hmBottom(); }
+}
+function nearGreen(g){ return ui.gps && gps.pos && metres(gps.pos, g.g) <= NEAR; }
+// One line on the scoring screen: distance to the green from where you're standing.
+function gpsLine(k, h){
+  const g = holeGeo(k, h); if (!g) return "";
+  if (!ui.gps) return `<button class="btn" data-act="gpson">Show GPS distance to the green</button>`;
+  if (gps.err) return `<span class="hint">${esc(gps.err)}</span><button class="btn" data-act="gpsoff">Turn GPS off</button>`;
+  if (!gps.pos) return `<span class="hint">Finding your position…</span>`;
+  const m = metres(gps.pos, g.g);
+  if (m > NEAR) return `<span class="hint">GPS on · you're ${farTxt(m)} from the ${ordinal(h)} green.</span>`;
+  return `<span>To the green</span>${g.f ? `<span class="hint">Front ${D(metres(gps.pos, g.f))}</span>` : ""}<b>${D(m)} ${unitLabel()}</b>${g.b ? `<span class="hint">Back ${D(metres(gps.pos, g.b))}</span>` : ""}<span class="hint">GPS ±${D(gps.acc)}</span>`;
+}
+function ordinal(n){ const s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" })[n % 10] || "th"; return n + s; }
+
+// The viewer draws the photo itself so it can turn it: tee at the bottom, green at the top.
+const hm = { open: false, k: "tour", h: 1, target: null, view: null };
+function hmOpen(k, h){
+  Object.assign(hm, { open: true, k, h: Math.min(18, Math.max(1, h)), target: null });
+  const el = document.getElementById("hm"); el.hidden = false;
+  hmShell(); requestAnimationFrame(hmDraw); gpsSync();
+}
+function hmClose(){ if (hmResize) hmResize.disconnect(); hm.open = false; hm.view = null; const el = document.getElementById("hm"); el.hidden = true; el.innerHTML = ""; gpsSync(); }
+function hmShell(){
+  const c = course(hm.k), h = hm.h;
+  const lens = c.tees.filter(t => t.m && !/W$/.test(t.id)).map(t => `${esc(t.id)}: ${dist(t.m[h-1])}`).join(" · ");
+  document.getElementById("hm").innerHTML = `<div class="hm" role="dialog" aria-modal="true" aria-label="Map of hole ${h}">
+    <div class="hmtop"><button class="rb" data-act="hmclose" aria-label="Close">✕</button>
+      <b>Hole ${h}</b><span class="meta">${esc(c.name)} · Par ${c.par[h-1]} · SI ${c.si[h-1]}<br>Tees ${lens} ${unitLabel()}</span>
+      <button class="rb" data-act="hmgo" data-d="-1" ${h === 1 ? "disabled" : ""} aria-label="Previous hole">‹</button>
+      <button class="rb" data-act="hmgo" data-d="1" ${h === 18 ? "disabled" : ""} aria-label="Next hole">›</button></div>
+    <div class="hmmap" id="hmmap" data-act="hmtap"></div>
+    <div class="hmbot" id="hmbot"></div></div>`;
+}
+function hmDraw(){
+  const box = document.getElementById("hmmap"); if (!box) return;
+  const g = holeGeo(hm.k, hm.h); hm.view = null;
+  hmBottom(); // fill the panel first so the photo is measured at its final size
+  if (!g) {
+    box.innerHTML = `<div class="none"><b>No map for this hole yet</b><span>Organisers can place the tee and green in Setup → Hole maps.</span></div>`;
+    hmBottom(); return;
+  }
+  const W = box.clientWidth, H = box.clientHeight, Z = MAX_Z;
+  const T = wpx(g.t, Z), G = wpx(g.g, Z), ang = Math.atan2(G[0] - T[0], -(G[1] - T[1]));
+  const rel = p => { const q = wpx(p, Z); return rot(q[0] - T[0], q[1] - T[1], -ang); };
+  const rp = [g.t, g.d, g.f, g.b, g.g].filter(Boolean).map(rel), xs = rp.map(p => p[0]), ys = rp.map(p => p[1]);
+  const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+  const s = Math.min(2, (W - 100) / Math.max(1, Math.max(...xs) - Math.min(...xs)), (H - 80) / Math.max(1, Math.max(...ys) - Math.min(...ys)));
+  const z = Math.max(3, Math.min(Z, Math.floor(Z + Math.log2(s)))), f = 2 ** (Z - z), n = 2 ** z;
+  // Tiles covering the screen at any rotation, positioned relative to a nearby origin to keep CSS numbers small.
+  const cw = rot(cx, cy, ang), Cz = [(T[0] + cw[0]) / f, (T[1] + cw[1]) / f], R = Math.hypot(W, H) / 2 / s / f + 8;
+  const x0 = Math.floor((Cz[0] - R) / 256), x1 = Math.floor((Cz[0] + R) / 256), y0 = Math.floor((Cz[1] - R) / 256), y1 = Math.floor((Cz[1] + R) / 256);
+  let imgs = "";
+  for (let tx = x0; tx <= x1; tx++) for (let ty = Math.max(0, y0); ty <= Math.min(n - 1, y1); ty++)
+    imgs += `<img src="${TILE_URL(z, ((tx % n) + n) % n, ty)}" style="left:${(tx - x0) * 256}px;top:${(ty - y0) * 256}px" alt="" draggable="false">`;
+  const tf = `translate(${W / 2}px,${H / 2}px) scale(${s}) translate(${-cx}px,${-cy}px) rotate(${-ang}rad) translate(${x0 * 256 * f - T[0]}px,${y0 * 256 * f - T[1]}px) scale(${f})`;
+  box.innerHTML = `<div class="tiles" style="transform:${tf}">${imgs}</div><svg id="hmsvg" aria-hidden="true"></svg><span class="attr">${TILE_ATTR}</span>`;
+  hm.view = { g, W, H,
+    toScreen: p => { const r = rel(p); return [W / 2 + (r[0] - cx) * s, H / 2 + (r[1] - cy) * s]; },
+    fromScreen: (sx, sy) => { const r = rot((sx - W / 2) / s + cx, (sy - H / 2) / s + cy, ang); return wll(T[0] + r[0], T[1] + r[1], Z); },
+    pxPerM: s / (156543.03392 * Math.cos(g.g[0] * Math.PI / 180) / 2 ** Z) };
+  hm.size = W + "x" + H;
+  if (hmResize) { hmResize.disconnect(); hmResize.observe(box); }
+  hmOverlay();
+}
+function hmOverlay(){
+  const svg = document.getElementById("hmsvg"), v = hm.view; if (!svg || !v) return;
+  const g = v.g, S = v.toScreen, u = unitLabel();
+  const lbl = (p, txt, dx = 9, dy = 4, anchor = "start") => `<text class="lbl" x="${p[0] + dx}" y="${p[1] + dy}" text-anchor="${anchor}">${txt}</text>`;
+  const line = (a, b, attrs) => `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" ${attrs}/>`;
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const route = [g.t, g.d, g.g].filter(Boolean);
+  let out = `<polyline points="${route.map(S).map(p => p.join(",")).join(" ")}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="7 6" opacity=".9"/>`;
+  // Distance markers measured back from the middle of the green along the line of play.
+  const back = [...route].reverse(), segs = back.slice(1).map((p, i) => [back[i], p, metres(back[i], p)]), total = sum(segs.map(x => x[2]));
+  for (const mark of [100, 150, 200, 250]) {
+    let rest = ui.unit === "m" ? mark : mark / 1.09361; if (rest > total - 25) continue;
+    for (const [a, b, len] of segs) {
+      if (rest > len) { rest -= len; continue; }
+      const A = S(a), B = S(b), k = rest / len, p = [A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k];
+      out += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#fff" stroke="#000" stroke-width="1"/>` + lbl(p, mark); break;
+    }
+  }
+  if (g.d) { const t = S(g.t), d = S(g.d), gg = S(g.g);
+    out += `<circle cx="${d[0]}" cy="${d[1]}" r="4" fill="#fff"/>` + lbl(mid(t, d), `${D(metres(g.t, g.d))} ${u}`, -9, 4, "end") + lbl(mid(d, gg), `${D(metres(g.d, g.g))} ${u}`, -9, 4, "end"); }
+  for (const k of ["f", "b"]) if (g[k]) { const p = S(g[k]); out += `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#ffd54a" stroke="#000" stroke-width="1"/>`; }
+  const t = S(g.t), gg = S(g.g);
+  out += `<circle cx="${t[0]}" cy="${t[1]}" r="7" fill="#fff" stroke="#000" stroke-width="1.5"/>` + lbl(t, "Tee", 11, 5);
+  out += `<line x1="${gg[0]}" y1="${gg[1]}" x2="${gg[0]}" y2="${gg[1] - 24}" stroke="#fff" stroke-width="2"/><polygon points="${gg[0]},${gg[1] - 24} ${gg[0] + 14},${gg[1] - 19} ${gg[0]},${gg[1] - 14}" fill="#e53935"/><circle cx="${gg[0]}" cy="${gg[1]}" r="3" fill="#fff"/>`;
+  let me = null;
+  if (ui.gps && gps.pos) {
+    const p = S(gps.pos);
+    if (p[0] > -40 && p[0] < v.W + 40 && p[1] > -40 && p[1] < v.H + 40) {
+      me = p;
+      out += `<circle cx="${p[0]}" cy="${p[1]}" r="${Math.max(8, (gps.acc || 0) * v.pxPerM)}" fill="rgba(66,133,244,.18)" stroke="rgba(66,133,244,.5)"/><circle cx="${p[0]}" cy="${p[1]}" r="7" fill="#4285f4" stroke="#fff" stroke-width="2.5"/>`;
+      if (!hm.target) out += line(p, gg, `stroke="#8ab4f8" stroke-width="2"`) + lbl(mid(p, gg), `${D(metres(gps.pos, g.g))} ${u}`);
+    }
+  }
+  if (hm.target) {
+    const from = me && nearGreen(g) ? gps.pos : g.t, a = S(from), p = S(hm.target);
+    out += line(a, p, `stroke="#ffd54a" stroke-width="2.5"`) + line(p, gg, `stroke="#ffd54a" stroke-width="2" stroke-dasharray="5 5"`);
+    out += `<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="none" stroke="#ffd54a" stroke-width="2.5"/><circle cx="${p[0]}" cy="${p[1]}" r="2.5" fill="#ffd54a"/>`;
+    out += lbl(mid(a, p), `${D(metres(from, hm.target))} ${u}`) + lbl(mid(p, gg), `${D(metres(hm.target, g.g))} ${u}`);
+  }
+  svg.innerHTML = out;
+}
+function hmBottom(){
+  const el = document.getElementById("hmbot"); if (!el) return;
+  const g = holeGeo(hm.k, hm.h), u = unitLabel(); if (!g) { el.innerHTML = ""; return; }
+  const near = nearGreen(g), from = near ? gps.pos : null;
+  const tile = (m, label, cls) => `<div class="${cls || ""}"><b>${D(m)}</b>${label}</div>`;
+  let html = near
+    ? `<div class="yd">${g.f ? tile(metres(from, g.f), "Front") : ""}${tile(metres(from, g.g), `Middle · ${u}`, "mid")}${g.b ? tile(metres(from, g.b), "Back") : ""}</div>`
+    : `<div class="yd">${g.f ? tile(viaLen(g, g.f), "Front") : ""}${tile(viaLen(g, g.g), `Tee to middle · ${u}`, "mid")}${g.b ? tile(viaLen(g, g.b), "Back") : ""}</div>`;
+  const status = near ? `GPS · accurate to about ${D(gps.acc)} ${u}`
+    : ui.gps ? (gps.err || (gps.pos ? `GPS on · you're ${farTxt(metres(gps.pos, g.g))} from this green, so distances are from the tee marker.` : "Finding your position…"))
+    : "Distances from the tee marker. Turn on GPS for distances from where you are.";
+  html += `<div class="row" style="justify-content:space-between"><span style="flex:1;min-width:0;opacity:.85">${esc(status)}</span>
+    <button class="rb${ui.gps ? " on" : ""}" data-act="${ui.gps ? "gpsoff" : "gpson"}">GPS ${ui.gps ? "on" : "off"}</button></div>`;
+  html += hm.target
+    ? `<div class="row" style="justify-content:space-between"><span>Target: <b>${D(metres(near ? from : g.t, hm.target))} ${u}</b> from ${near ? "you" : "the tee"}, <b>${D(metres(hm.target, g.g))} ${u}</b> to the middle</span><button class="rb" data-act="hmclear">Clear</button></div>`
+    : `<span style="opacity:.7">Tap the photo to measure to any point. Dots mark 100, 150, 200 and 250 ${u} to the middle of the green.</span>`;
+  el.innerHTML = html;
+}
+// Redraw when the photo area changes size (phone rotated, or the panel below grows).
+const hmResize = window.ResizeObserver ? new ResizeObserver(() => {
+  const box = document.getElementById("hmmap");
+  if (hm.open && box && hm.size !== box.clientWidth + "x" + box.clientHeight) hmDraw();
+}) : null;
+
+// ---------- hole map editor (Setup) ----------
+// Uses Leaflet so organisers can pan and zoom freely while placing points. Loaded only when the editor opens.
+let leafletP = null;
+function loadLeaflet(){
+  return leafletP = leafletP || new Promise((res, rej) => {
+    const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"; document.head.appendChild(css);
+    const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js";
+    s.onload = () => res(window.L); s.onerror = () => { leafletP = null; s.remove(); rej(new Error("leaflet")); }; document.head.appendChild(s);
+  });
+}
+const GE_MODES = [["t", "Tee", "#ffffff"], ["g", "Green middle", "#e53935"], ["f", "Front", "#ffd54a"], ["b", "Back", "#ffd54a"], ["d", "Dogleg", "#8ab4f8"]];
+const ge = { open: false, k: "tour", h: 1, mode: "t", pts: {}, dirty: false, map: null, layer: null };
+async function geOpen(){
+  if (blocked()) return;
+  const el = document.getElementById("ge"); el.hidden = false;
+  el.innerHTML = `<div class="ge" role="dialog" aria-modal="true" aria-label="Hole map editor">
+    <div class="gerow"><button class="btn" data-act="geclose">Done</button>
+      <select id="ge-course" aria-label="Course">${COURSE_KEYS.map(k => `<option value="${k}" ${k === ge.k ? "selected" : ""}>${esc(course(k).name)}</option>`).join("")}</select>
+      <input type="text" id="ge-q" value="Camiral Golf, Caldes de Malavella" aria-label="Find a place"><button class="btn" data-act="gefind">Find</button><button class="btn" data-act="geme">My location</button></div>
+    <div class="gerow" style="display:grid;gap:6px"><div class="hdone" id="ge-holes"></div><div class="row modes" id="ge-modes"></div><p class="hint" id="ge-hint"></p></div>
+    <div id="gemap"><p class="hint" style="padding:16px">Loading the map…</p></div>
+    <div class="gerow"><button class="btn danger" data-act="geclear">Clear hole</button><span class="hint" id="ge-info" style="flex:1;min-width:10rem"></span><button class="btn pri" data-act="gesave">Save hole</button></div></div>`;
+  let L;
+  try { L = await loadLeaflet(); } catch { toast("Couldn't load the map. Check your signal."); geClose(true); return; }
+  document.getElementById("gemap").innerHTML = "";
+  ge.map = L.map("gemap", { maxZoom: 21 });
+  L.tileLayer(TILE_URL("{z}", "{x}", "{y}"), { maxNativeZoom: MAX_Z, maxZoom: 21, attribution: TILE_ATTR }).addTo(ge.map);
+  ge.layer = L.layerGroup().addTo(ge.map);
+  ge.map.on("click", e => {
+    ge.pts[ge.mode] = [e.latlng.lat, e.latlng.lng]; ge.dirty = true;
+    const i = GE_MODES.findIndex(x => x[0] === ge.mode); if (i < 3) ge.mode = GE_MODES[i + 1][0];
+    geDraw();
+  });
+  ge.open = true;
+  geHole(ge.h);
+}
+function geClose(force){
+  if (!force && ge.dirty && !confirm(`Hole ${ge.h} has unsaved changes. Close without saving?`)) return;
+  if (ge.map) ge.map.remove();
+  Object.assign(ge, { open: false, map: null, layer: null, dirty: false });
+  const el = document.getElementById("ge"); el.hidden = true; el.innerHTML = "";
+  render(true);
+}
+function geHole(h){
+  ge.h = h; ge.pts = clone((course(ge.k).geo || {})[h] || {}); ge.dirty = false;
+  ge.mode = !ge.pts.t ? "t" : !ge.pts.g ? "g" : "f";
+  const pts = Object.values(ge.pts), prev = holeGeo(ge.k, h - 1), all = [];
+  for (let i = 1; i <= 18; i++) { const g = holeGeo(ge.k, i); if (g) all.push(g.t, g.g); }
+  if (pts.length >= 2) ge.map.fitBounds(pts, { padding: [40, 40], maxZoom: 19 });
+  else if (pts.length) ge.map.setView(pts[0], 18);
+  else if (prev) ge.map.setView(prev.g, 17);
+  else if (all.length) ge.map.fitBounds(all, { padding: [20, 20] });
+  else ge.map.setView(GEO_START, 15);
+  geDraw();
+}
+function geStrip(){
+  const el = document.getElementById("ge-holes"); if (!el) return;
+  el.innerHTML = Array.from({ length: 18 }, (_, i) => `<button class="${holeGeo(ge.k, i + 1) ? "ok" : ""}${i + 1 === ge.h ? " cur" : ""}" data-act="gehole" data-h="${i + 1}" aria-label="Hole ${i + 1}">${i + 1}</button>`).join("");
+}
+function geDraw(){
+  if (!ge.map) return;
+  const L = window.L, p = ge.pts;
+  ge.layer.clearLayers();
+  for (let i = 1; i <= 18; i++) { const g = holeGeo(ge.k, i); if (!g || i === ge.h) continue;
+    L.polyline([g.t, g.d, g.g].filter(Boolean), { color: "#fff", weight: 2, opacity: .55, dashArray: "4 6", interactive: false }).addTo(ge.layer)
+      .bindTooltip(String(i), { permanent: true, direction: "center", className: "" }); }
+  if (p.t && p.g) L.polyline([p.t, p.d, p.g].filter(Boolean), { color: "#fff", weight: 3, interactive: false }).addTo(ge.layer);
+  for (const [k, , col] of GE_MODES) if (p[k]) {
+    const icon = L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13],
+      html: `<div style="width:26px;height:26px;border-radius:50%;background:${col};border:2px solid #000;display:grid;place-content:center;font:700 12px sans-serif;color:#000">${k.toUpperCase()}</div>` });
+    L.marker(p[k], { icon, draggable: true }).addTo(ge.layer).on("dragend", e => { const ll = e.target.getLatLng(); ge.pts[k] = [ll.lat, ll.lng]; ge.dirty = true; geDraw(); });
+  }
+  geStrip();
+  document.getElementById("ge-modes").innerHTML = GE_MODES.map(([k, label]) => `<button data-act="gemode" data-m="${k}" aria-pressed="${ge.mode === k}" class="${p[k] ? "set" : ""}">${label}</button>`).join("");
+  const label = GE_MODES.find(x => x[0] === ge.mode)[1].toLowerCase();
+  document.getElementById("ge-hint").textContent = `Hole ${ge.h}: tap the map to place the ${label}. Drag a marker to move it. Tee and green middle are needed; front, back and dogleg are optional. Put the tee on the tee box used for the rounds.`;
+  const c = course(ge.k), tee = defTee(c);
+  document.getElementById("ge-info").textContent = p.t && p.g
+    ? `Tee to middle ${Math.round(viaLen(p, p.g))} m (${Math.round(viaLen(p, p.g) * 1.09361)} yd). Card, tee ${tee.id}: ${tee.m ? tee.m[ge.h - 1] + " m" : "–"}.${ge.dirty ? " Not saved yet." : ""}`
+    : `Par ${c.par[ge.h - 1]}${tee.m ? `, ${tee.m[ge.h - 1]} m off tee ${tee.id}` : ""}.`;
+}
+// Writes one hole without touching the rest of the event document.
+async function geoWrite(k, h, val){
+  const ref = fs.doc("event/main"), FP = firebase.firestore.FieldPath;
+  try { await ref.update(new FP("courses", k, "geo", String(h)), val || firebase.firestore.FieldValue.delete()); }
+  catch (e) {
+    if (e.code !== "not-found") throw e;
+    const full = clone(ev); full.courses[k].geo = Object.assign({}, full.courses[k].geo);
+    if (val) full.courses[k].geo[h] = val; else delete full.courses[k].geo[h];
+    await ref.set(full);
+  }
+}
+function geSave(){
+  if (blocked()) return;
+  const p = ge.pts; if (!p.t || !p.g) { toast("Place at least the tee and the middle of the green."); return; }
+  const val = {}; for (const [k] of GE_MODES) if (p[k]) val[k] = p[k].map(x => Math.round(x * 1e6) / 1e6);
+  const h = ge.h; geoWrite(ge.k, h, val).catch(onWriteError);
+  toast(`Hole ${h} saved`); ge.dirty = false;
+  if (h < 18) geHole(h + 1); else geDraw();
+}
+function geClear(){
+  if (blocked()) return;
+  if (holeGeo(ge.k, ge.h)) { if (!confirm(`Remove the saved map for hole ${ge.h}?`)) return; geoWrite(ge.k, ge.h, null).catch(onWriteError); }
+  ge.pts = {}; ge.mode = "t"; ge.dirty = false; geDraw();
+}
+async function geFind(){
+  const q = val("ge-q").trim(); if (!q || !ge.map) return;
+  try {
+    const r = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`)).json();
+    if (r[0]) ge.map.setView([+r[0].lat, +r[0].lon], 16); else toast("Couldn't find that place.");
+  } catch { toast("Search isn't working. Pan the map instead."); }
+}
+function geMe(){
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => ge.map && ge.map.setView([p.coords.latitude, p.coords.longitude], 18), () => toast("Couldn't get your location."), { enableHighAccuracy: true, timeout: 15000 });
+}
+
+// ---------- match graph ----------
+// How the match stood after each hole: above the line one side is up, below the other.
+function matchGraph(m, st){
+  const hs = Object.keys(st.after).map(Number).sort((x, y) => x - y); if (!hs.length) return "";
+  const pts = [[0, 0], ...hs.map(h => [h, st.after[h]])], top = Math.max(2, ...pts.map(p => Math.abs(p[1])));
+  const W = 360, H = 150, L = 34, R = 10, T = 10, B = 22;
+  const x = h => L + h * (W - L - R) / 18, y = v => T + (top - v) * (H - T - B) / (2 * top), y0 = y(0);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+  const area = `${line}L${x(pts[pts.length - 1][0]).toFixed(1)},${y0}L${x(0)},${y0}Z`;
+  const id = "w" + m.id;
+  let grid = "";
+  for (let v = -top; v <= top; v++) grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--${v ? "line" : "muted"})" stroke-width="${v ? 1 : 1.5}"/>`;
+  const yl = v => `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${v === 0 ? "AS" : Math.abs(v)}</text>`;
+  const xl = h => `<text x="${x(h)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${h}</text>`;
+  const desc = (h, v) => `After the ${ordinal(h)}: ${v === 0 ? "all square" : `${teamName(v > 0 ? "A" : "B")} ${Math.abs(v)} up`}`;
+  const hits = hs.map(h => `<rect x="${x(h) - 9}" y="${T}" width="18" height="${H - T - B}" fill="transparent" data-wtip="${esc(desc(h, st.after[h]))}"/>`).join("");
+  const dots = pts.slice(1).map(p => `<circle cx="${x(p[0])}" cy="${y(p[1])}" r="4" fill="${p[1] > 0 ? "var(--ta)" : p[1] < 0 ? "var(--tb)" : "var(--muted)"}" stroke="var(--surface)" stroke-width="2"/>`).join("");
+  const lastH = hs[hs.length - 1];
+  return `<div class="card worm"><b>Match graph</b>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Match position after each hole. ${esc(desc(lastH, st.after[lastH]))}.">
+      <defs><clipPath id="${id}a"><rect x="0" y="0" width="${W}" height="${y0}"/></clipPath><clipPath id="${id}b"><rect x="0" y="${y0}" width="${W}" height="${H}"/></clipPath></defs>
+      ${grid}${[-top, 0, top].map(yl).join("")}${[1, 9, 18].map(xl).join("")}
+      <line x1="${x(9.5)}" x2="${x(9.5)}" y1="${T}" y2="${H - B}" stroke="var(--line)" stroke-dasharray="3 3"/>
+      <path d="${area}" fill="var(--ta)" opacity=".16" clip-path="url(#${id}a)"/><path d="${area}" fill="var(--tb)" opacity=".16" clip-path="url(#${id}b)"/>
+      <path d="${line}" fill="none" stroke="var(--ta)" stroke-width="2" stroke-linejoin="round" clip-path="url(#${id}a)"/>
+      <path d="${line}" fill="none" stroke="var(--tb)" stroke-width="2" stroke-linejoin="round" clip-path="url(#${id}b)"/>
+      <line x1="${x(0)}" x2="${x(lastH)}" y1="${y0}" y2="${y0}" stroke="var(--muted)" stroke-width="1.5" opacity="${pts.some(p => p[1] === 0 && p[0]) ? 1 : 0}"/>
+      ${dots}${hits}</svg>
+    <div class="legend"><span><span class="chip" style="background:var(--ta);min-width:0;width:10px;height:10px;padding:0"></span> ${esc(teamName("A"))} up</span><span><span class="chip" style="background:var(--tb);min-width:0;width:10px;height:10px;padding:0"></span> ${esc(teamName("B"))} up</span></div>
+    <div class="tip" aria-live="polite">${esc(desc(lastH, st.after[lastH]))}. Tap the graph for any hole.</div></div>`;
+}
+function wormTip(e){
+  const r = e.target.closest && e.target.closest("[data-wtip]"); if (!r) return;
+  const tip = r.closest(".worm").querySelector(".tip"); if (tip) tip.textContent = r.dataset.wtip;
+}
+document.addEventListener("pointerover", wormTip);
+document.addEventListener("click", wormTip);
+
+// ---------- latest results feed ----------
+function feedItems(){
+  const out = [];
+  for (const m of readyMatches()) {
+    const st = matchState(m);
+    for (let h = 1; h <= 18; h++) {
+      const s = m.scores[h], r = st.res[h];
+      if (r && s && s.t && st.after[h] != null) out.push({ m, st, h, r, t: s.t });
+    }
+  }
+  return out.sort((a, b) => b.t - a.t);
+}
+function agoTxt(t){
+  const d = Date.now() - t, mins = Math.round(d / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins} min ago`;
+  const dt = new Date(t), clock = dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return dt.toDateString() === new Date().toDateString() ? clock : `${dt.toLocaleDateString("en-GB", { weekday: "short" })} ${clock}`;
+}
+function renderFeed(){
+  const items = feedItems(); if (!items.length) return "";
+  const shown = items.slice(0, ui.feedMore ? 25 : 5);
+  const rows = shown.map(({ m, st, h, r, t }) => {
+    const names = side => m[side].map(sname).join(" & ");
+    const what = r.w === "H" ? `${ordinal(h)} halved` : `${esc(names(r.w.toLowerCase()))} win the ${ordinal(h)}`;
+    const last = Math.max(...Object.keys(st.after).map(Number)), after = st.after[h];
+    const where = st.status === "final" && h === last
+      ? (st.leader ? `${esc(teamName(st.leader))} win the match ${esc(st.text)}` : "Match halved")
+      : after === 0 ? `All square thru ${h}` : `${esc(teamName(after > 0 ? "A" : "B"))} ${Math.abs(after)} up thru ${h}`;
+    const col = r.w === "H" ? "var(--line)" : `var(--t${r.w.toLowerCase()})`;
+    return `<button data-act="open" data-id="${m.id}"><span class="stripe" style="background:${col}"></span>
+      <span class="w">${what} · ${where}<small>R${m.round} ${FORMATS[m.format].label} M${m.slot} · ${esc(names("a"))} v ${esc(names("b"))}</small></span><span class="ago">${agoTxt(t)}</span></button>`;
+  }).join("");
+  const more = items.length > 5 ? `<button class="btn" data-act="feedmore" style="justify-self:start;margin:4px 12px 10px">${ui.feedMore ? "Show fewer" : "Show more"}</button>` : "";
+  return `<section class="round"><div class="rhead"><h2>Latest</h2></div><div class="feed">${rows}</div>${more}</section>`;
+}
+setInterval(() => { if (ui.tab === "board" && !ui.match && !document.hidden) renderBoard(); }, 60000);
+
+// ---------- stats & awards ----------
+function eventStats(){
+  const per = {}, parts = {}, holes = {}, team = { A: 0, B: 0, H: 0 };
+  const P = id => per[id] = per[id] || { won: 0, gb: 0, nb: 0 };
+  let biggest = null, comeback = null, distance = 0, finished = 0;
+  for (const m of readyMatches()) {
+    const st = matchState(m);
+    for (let h = 1; h <= 18; h++) {
+      const r = st.res[h];
+      if (r && st.after[h] != null) { if (r.w === "H") team.H++; else { team[r.w]++; m[r.w.toLowerCase()].forEach(id => P(id).won++); } }
+      const s = m.scores[h] || {}, par = m.c.par[h-1];
+      for (const k of entryKeys(m)) {
+        const v = s[k]; if (typeof v !== "number") continue;
+        const net = v - strokesOn(shotsForKey(m, k), m.c.si[h-1]), ids = k.length === 2 ? [m[k[0]][+k[1]]] : m[k];
+        ids.forEach(id => { if (v < par) P(id).gb++; if (net < par) P(id).nb++; });
+        const c = holes[m.r.course] = holes[m.r.course] || {}, a = c[h] = c[h] || { n: 0, over: 0 }; a.n++; a.over += v - par;
+      }
+    }
+    for (const side of ["a", "b"]) {
+      const T = side.toUpperCase(), key = [...m[side]].sort().join("+");
+      const p = parts[key] = parts[key] || { ids: m[side], T, n: 0, P: 0, W: 0, H: 0, L: 0, pts: 0 }; p.n++;
+      if (st.status !== "final") continue;
+      p.P++; if (!st.leader) { p.H++; p.pts += m.r.points / 2; } else if (st.leader === T) { p.W++; p.pts += m.r.points; } else p.L++;
+    }
+    if (st.status !== "final") continue;
+    finished++; if (st.played === 18) distance++;
+    if (st.leader) { const score = Math.abs(st.diff) * 100 + (18 - st.played); if (!biggest || score > biggest.score) biggest = { m, st, score }; }
+    for (const S of st.leader ? [st.leader] : ["A", "B"]) {
+      const sign = S === "A" ? 1 : -1, worst = Math.max(0, ...Object.values(st.after).map(v => -v * sign));
+      if (worst >= 2 && (!comeback || worst > comeback.worst)) comeback = { m, st, S, worst };
+    }
+  }
+  return { per, parts, holes, team, biggest, comeback, distance, finished };
+}
+function renderStats(){
+  const s = eventStats(), ids = Object.keys(players);
+  const recs = Object.fromEntries(ids.map(id => [id, playerRecord(id)]));
+  const best = (score, min = 1) => { const top = Math.max(0, ...ids.map(score)); return top >= min ? { v: top, ids: ids.filter(id => score(id) === top) } : null; };
+  const who = list => list.map(pname).join(", ");
+  const teamOf = list => { const t = new Set(list.map(id => players[id] && players[id].team)); return t.size === 1 ? [...t][0] : null; };
+  const award = (k, list, v, d) => `<div class="award" style="${list && teamOf(list) ? `border-top-color:var(--t${teamOf(list).toLowerCase()})` : ""}"><span class="k">${k}</span><span class="v">${v}</span><span class="d">${d}</span></div>`;
+  const pairTxt = (m, side) => m[side].map(sname).join(" & ");
+  let aw = "";
+  const pts = best(id => recs[id].pts, 0.5);
+  if (pts) aw += award("Top points scorer", pts.ids, esc(who(pts.ids)), `${half(pts.v)} point${pts.v === 1 ? "" : "s"}${pts.ids.length === 1 ? ` · ${recs[pts.ids[0]].W}-${recs[pts.ids[0]].H}-${recs[pts.ids[0]].L}` : ""}`);
+  const won = best(id => (s.per[id] || {}).won || 0);
+  if (won) aw += award("Most holes won", won.ids, esc(who(won.ids)), `${won.v} holes won by their side`);
+  const gb = best(id => (s.per[id] || {}).gb || 0);
+  if (gb) aw += award("Birdie machine", gb.ids, esc(who(gb.ids)), `${gb.v} gross birdie${gb.v > 1 ? "s" : ""} or better (pair formats count for both)`);
+  const nb = best(id => (s.per[id] || {}).nb || 0);
+  if (nb) aw += award("Most net birdies", nb.ids, esc(who(nb.ids)), `${nb.v} net birdie${nb.v > 1 ? "s" : ""} or better`);
+  if (s.biggest) { const { m, st } = s.biggest, side = st.leader.toLowerCase();
+    aw += award("Biggest win", m[side], esc(st.text), `${esc(pairTxt(m, side))} (${esc(teamName(st.leader))}) in R${m.round} ${FORMATS[m.format].label}`); }
+  if (s.comeback) { const { m, st, S, worst } = s.comeback, side = S.toLowerCase();
+    aw += award("Best comeback", m[side], `From ${worst} down`, `${esc(pairTxt(m, side))} (${esc(teamName(S))}) ${st.leader ? `won ${esc(st.text)}` : "halved the match"} in R${m.round}`); }
+  const pl = Object.values(s.parts).filter(p => p.P).sort((a, b) => b.pts - a.pts || b.W - a.W);
+  if (pl.length && pl[0].pts > 0) aw += award("Best partnership", pl[0].ids, esc(pl[0].ids.map(sname).join(" & ")), `${half(pl[0].pts)} pts · ${pl[0].W}-${pl[0].H}-${pl[0].L} together`);
+  if (s.finished) aw += award("Went the distance", null, `${s.distance} of ${s.finished}`, "finished matches that reached the 18th");
+  const tot = s.team.A + s.team.B + s.team.H;
+  if (tot) aw += award("Holes won", null, `<span style="color:var(--ta)">${s.team.A}</span> – <span style="color:var(--tb)">${s.team.B}</span>`, `${esc(teamName("A"))} v ${esc(teamName("B"))}, ${s.team.H} halved`);
+  if (!aw) { $app.innerHTML = `<h2 class="sec">Stats</h2><div class="empty">Awards and stats appear here once scores are in.</div>`; return; }
+
+  const prow = ids.map(id => ({ id, r: recs[id], x: s.per[id] || { won: 0, gb: 0, nb: 0 } })).filter(o => o.r.list.length)
+    .sort((a, b) => b.r.pts - a.r.pts || b.x.won - a.x.won || a.r.L - b.r.L);
+  const table = prow.map(({ id, r, x }) => `<tr class="click" data-act="profile" data-id="${id}"><td style="border-left:4px solid var(--t${players[id].team.toLowerCase()})">${esc(pname(id))}</td><td><b>${half(r.pts)}</b></td><td>${r.W}-${r.H}-${r.L}</td><td>${x.won}</td><td>${x.gb}</td><td>${x.nb}</td></tr>`).join("");
+  const ptab = pl.map(p => `<tr><td style="border-left:4px solid var(--t${p.T.toLowerCase()})">${esc(p.ids.map(sname).join(" & "))}</td><td>${p.P}</td><td>${p.W}-${p.H}-${p.L}</td><td><b>${half(p.pts)}</b></td></tr>`).join("");
+  const hcards = COURSE_KEYS.filter(k => s.holes[k]).map(k => {
+    const c = course(k), H = Array.from({ length: 18 }, (_, i) => i + 1), a = s.holes[k];
+    const avg = h => a[h] && a[h].n ? a[h].over / a[h].n : null;
+    const ranked = H.filter(h => a[h] && a[h].n >= 2).sort((x, y) => avg(y) - avg(x));
+    const fmt = v => v == null ? "" : (v > 0 ? "+" : "") + v.toFixed(1);
+    return `<div class="card"><div style="padding:10px 12px 0"><b>${esc(c.name)}</b>${ranked.length >= 6 && avg(ranked[0]) > avg(ranked[ranked.length - 1]) ? ` <span class="hint">Hardest: ${ranked[0]} (${fmt(avg(ranked[0]))}) · Easiest: ${ranked[ranked.length - 1]} (${fmt(avg(ranked[ranked.length - 1]))})</span>` : ""}</div>
+      <div class="scroll" style="padding:8px 0"><table class="sc"><thead><tr><th>Hole</th>${H.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>
+      <tr><td class="lbl">Par</td>${H.map(h => `<td>${c.par[h-1]}</td>`).join("")}</tr>
+      <tr><td class="lbl">Avg v par</td>${H.map(h => `<td>${fmt(avg(h))}</td>`).join("")}</tr>
+      <tr><td class="lbl">Scores</td>${H.map(h => `<td class="hint">${a[h] ? a[h].n : ""}</td>`).join("")}</tr></tbody></table></div></div>`;
+  }).join("");
+  $app.innerHTML = `<h2 class="sec">Awards</h2><div class="awards">${aw}</div>
+    ${table ? `<h2 class="sec">Player stats</h2><div class="card"><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Player</th><th>Pts</th><th>W-H-L</th><th>Holes won</th><th>Birdies</th><th>Net birdies</th></tr></thead><tbody>${table}</tbody></table></div></div>
+      <p class="hint">Holes won counts holes their side won in matches they played. Birdies are gross strokes under par; net birdies take off shots received. In foursomes, Chapman and greensomes the pair's score counts for both players. Holes entered only as a result (no strokes) count for holes won but not birdies.</p>` : ""}
+    ${ptab ? `<h2 class="sec">Partnerships</h2><div class="card"><div class="scroll"><table class="list" style="width:100%"><thead><tr><th>Pair</th><th>Played</th><th>W-H-L</th><th>Pts</th></tr></thead><tbody>${ptab}</tbody></table></div></div>` : ""}
+    ${hcards ? `<h2 class="sec">How the holes played</h2><p class="lead">Average gross strokes over par for every score entered (each ball in fourball, each pair in the other formats).</p>${hcards}` : ""}`;
+}
+
+// ---------- share the score as an image ----------
+let h2cP = null, shareFile = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => { s.remove(); rej(new Error("script")); }; document.head.appendChild(s); }); }
+// Two taps: the first makes the picture, the second shares it (phones only allow sharing straight after a tap).
+async function makeShareImage(btn){
+  const card = document.querySelector(".scard"); if (!card) return;
+  btn.disabled = true; btn.textContent = "Making the image…";
+  const old = card.style.cssText;
+  try {
+    h2cP = h2cP || loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js").catch(e => { h2cP = null; throw e; });
+    await h2cP;
+    card.style.maxHeight = "none"; card.style.overflow = "visible";
+    const canvas = await window.html2canvas(card, { scale: 2, backgroundColor: getComputedStyle(card).backgroundColor, ignoreElements: el => el.hasAttribute && el.hasAttribute("data-noshot") });
+    const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
+    shareFile = new File([blob], `${fileBase()}-score.png`, { type: "image/png" });
+  } catch (e) { console.error(e); toast("Couldn't make the image."); }
+  finally { card.style.cssText = old; }
+  renderModal();
+}
+async function shareImage(){
+  if (!shareFile) return;
+  if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+    try { await navigator.share({ files: [shareFile], title: `${ev.name} ${ev.year}` }); } catch (e) { if (e.name !== "AbortError") toast("Couldn't share. Try again."); }
+  } else {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(shareFile); a.download = shareFile.name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast("Image downloaded");
+  }
 }
 
 // ---------- setup ----------
@@ -921,6 +1462,11 @@ function renderSetup(){
         <label class="f">Blurb<textarea id="bio-${id}" rows="3" style="min-height:70px;font-family:var(--body)" ${disabled}>${esc(p.bio || "")}</textarea></label></div>`).join("") || `<p class="hint">Add players first.</p>`}
       ${Object.keys(players).length ? `<div><button class="btn pri" data-act="savebios">Save profiles</button></div>` : ""}</section>
 
+    <section class="form"><h3>Hole maps</h3>
+      <p class="hint">Place the tee and the green for each hole on a satellite photo. Everyone then gets a map of each hole on the Course tab and the scoring screen, with GPS distances to the front, middle and back of the green. It takes about 10 minutes per course and is easiest on a laptop or tablet.</p>
+      <p class="hint">${COURSE_KEYS.map(k => `${esc(course(k).name)}: ${mappedCount(k)} of 18 holes mapped`).join(" · ")}</p>
+      <div><button class="btn pri" data-act="geopen" ${disabled}>Open the hole map editor</button></div></section>
+
     <section class="form"><h3>Courses</h3>
       <p class="hint">Course handicap = Index × Slope ÷ 113 + (Rating − Par), the same formula as the club's slope tables. Ratings, slopes, par and stroke index are from Camiral's official scorecards and slope sheets.</p>
       ${COURSE_KEYS.map(courseForm).join("<hr style='border:0;border-top:1px solid var(--line);width:100%'>")}
@@ -978,7 +1524,7 @@ async function saveCourse(){
     if ([...si].sort((x, y) => x - y).some((v, i) => v !== i + 1)) { toast(`${ev.courses[k].name}: stroke index must use each number 1–18 once.`); return; }
     const tees = ev.courses[k].tees.map((t, j) => ({ ...t, name: val(`${k}-tn-${j}`).trim() || t.name, rating: parseFloat(val(`${k}-tr-${j}`)), slope: parseFloat(val(`${k}-ts-${j}`)) }));
     if (tees.some(t => !isFinite(t.rating) || !(t.slope >= 55 && t.slope <= 155))) { toast(`${ev.courses[k].name}: every tee needs a course rating and a slope between 55 and 155.`); return; }
-    e.courses[k] = { name: val(`${k}-name`).trim() || ev.courses[k].name, tees, par, si };
+    e.courses[k] = { ...ev.courses[k], name: val(`${k}-name`).trim() || ev.courses[k].name, tees, par, si };
   }
   e.allow = { fourball: +val("a-fb") || 90, foursomes: +val("a-fs") || 50, chapLow: +val("a-cl") || 60, chapHigh: +val("a-ch") || 40, greenLow: +val("a-gl") || 60, greenHigh: +val("a-gh") || 40 };
   await writeEvent(e, "Courses saved");
@@ -1188,8 +1734,11 @@ function render(force){
   if (ui.tab === "board") ui.match ? renderMatch() : renderBoard();
   else if (ui.tab === "players") renderPlayers();
   else if (ui.tab === "shots") renderShots();
+  else if (ui.tab === "stats") renderStats();
   else if (ui.tab === "course") renderCourse();
   else renderSetup();
+  gpsSync();
+  if (ge.open) geStrip();
 }
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-act]"); if (!el) return;
@@ -1200,8 +1749,8 @@ document.addEventListener("click", e => {
     case "close": ui.match = null; saveUi(); render(true); break;
     case "player": ui.profile = null; ui.tab = "players"; ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
     case "profile": ui.profile = el.dataset.id; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
-    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; renderModal(); } break;
-    case "scores": ui.scores = true; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
+    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; shareFile = null; renderModal(); } break;
+    case "scores": ui.scores = true; shareFile = null; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
     case "savebios": saveBios(); break;
     case "hole": { const h = +el.dataset.h; if (h >= 1 && h <= 18) { ui.hole = h; render(); } break; }
     case "inc": case "dec": case "pu": {
@@ -1212,7 +1761,7 @@ document.addEventListener("click", e => {
       else v = Math.max(1, Math.min(15, cur + (act === "inc" ? 1 : -1)));
       queueScore(ui.match, String(ui.hole), k, v); break;
     }
-    case "clearhole": { for (const k of [...entryKeys(m), "w"]) queueScore(ui.match, String(ui.hole), k, null); break; }
+    case "clearhole": { for (const k of [...entryKeys(m), "w", "t"]) queueScore(ui.match, String(ui.hole), k, null); break; }
     case "quick": { const cur = (m.scores[ui.hole] || {}).w; queueScore(ui.match, String(ui.hole), "w", cur === el.dataset.w ? null : el.dataset.w); break; }
     case "unlock": pinMatches(val("pin")).then(ok => { if (ok) { ui.unlocked = true; saveUi(); render(true); } else toast("That PIN isn't right."); }); break;
     case "lock": ui.unlocked = false; saveUi(); render(true); toast("Setup locked on this phone"); break;
@@ -1231,6 +1780,24 @@ document.addEventListener("click", e => {
     case "exportplayers": exportPlayers(); break;
     case "exportbackup": exportBackup(); break;
     case "restore": doRestore(el); break;
+    case "hmopen": hmOpen(el.dataset.k, +el.dataset.h); break;
+    case "hmclose": hmClose(); break;
+    case "hmgo": { const h = hm.h + +el.dataset.d; if (h >= 1 && h <= 18) { hm.h = h; hm.target = null; hmShell(); hmDraw(); } break; }
+    case "hmtap": { if (!hm.view) break; const r = el.getBoundingClientRect(); hm.target = hm.view.fromScreen(e.clientX - r.left, e.clientY - r.top); hmOverlay(); hmBottom(); break; }
+    case "hmclear": hm.target = null; hmOverlay(); hmBottom(); break;
+    case "gpson": gpsSet(true); break;
+    case "gpsoff": gpsSet(false); break;
+    case "geopen": geOpen(); break;
+    case "geclose": geClose(); break;
+    case "gesave": geSave(); break;
+    case "geclear": geClear(); break;
+    case "gefind": geFind(); break;
+    case "geme": geMe(); break;
+    case "gemode": ge.mode = el.dataset.m; geDraw(); break;
+    case "gehole": { const h = +el.dataset.h; if (h !== ge.h && (!ge.dirty || confirm(`Hole ${ge.h} has unsaved changes. Discard them?`))) geHole(h); break; }
+    case "feedmore": ui.feedMore = !ui.feedMore; render(true); break;
+    case "sharemake": makeShareImage(el); break;
+    case "sharego": shareImage(); break;
   }
 });
 let setupDirty = false;
@@ -1239,6 +1806,10 @@ document.addEventListener("input", e => { if (ui.tab === "setup" && e.target.clo
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "restore-file") { readRestoreFile(t.files[0]); return; }
+  if (t.id === "ge-course") {
+    if (ge.dirty && !confirm(`Hole ${ge.h} has unsaved changes. Discard them?`)) { t.value = ge.k; return; }
+    ge.k = t.value; geHole(1); return;
+  }
   if (ui.tab === "setup" && t.closest("main")) setupDirty = true;
   if (t.id && t.id.startsWith("c-") && ui.tab === "shots") {
     const c = ui.calc;
@@ -1256,13 +1827,15 @@ document.addEventListener("change", e => {
   }
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && hm.open) { hmClose(); return; }
+  if (e.key === "Enter" && e.target.id === "ge-q") { geFind(); return; }
   if (e.key === "Escape" && (ui.profile || ui.scores)) { ui.profile = null; ui.scores = false; renderModal(); }
   if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.act === "scores") { e.preventDefault(); e.target.click(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "pin") document.querySelector('[data-act="unlock"]')?.click(); });
 
 // ---------- boot ----------
-if (!["board","players","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
+if (!["board","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
 if (ui.match && !/^r[1-4]m[1-4]$/.test(ui.match)) ui.match = null;
 if (ui.match) ui.hole = 1;
 render(true);
@@ -1279,7 +1852,7 @@ async function checkForUpdate(){
 }
 setTimeout(checkForUpdate, 4000);
 setInterval(checkForUpdate, 5 * 60 * 1000);
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(); gpsSync(); });
 
 try {
   if (!window.firebase || !CFG.firebase || !CFG.firebase.projectId) throw new Error("Firebase not configured");
