@@ -1,5 +1,5 @@
 rules_version = '2';
-// Photos and videos for the Photos tab. Anyone with the link can view, add and delete,
+// Photos and videos for the Media tab. Anyone with the link can view, add and delete,
 // but only pictures and videos, only under media/, and nothing over 250 MB.
 service firebase.storage {
   match /b/{bucket}/o {
