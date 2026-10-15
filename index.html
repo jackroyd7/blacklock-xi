@@ -345,7 +345,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-14.17";
+const BUILD = "2026-10-14.18";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -386,10 +386,10 @@ const DEFAULT_EVENT = {
   },
   allow: { fourball: 90, foursomes: 50, chapLow: 60, chapHigh: 40, greenLow: 60, greenHigh: 40 },
   rounds: [
-    { day: "Day 1", session: "Morning",   format: "foursomes",  points: 1, course: "tour",    tee: "54" },
-    { day: "Day 1", session: "Afternoon", format: "chapman",    points: 1, course: "stadium", tee: "60" },
-    { day: "Day 2", session: "Morning",   format: "greensomes", points: 1, course: "tour",    tee: "54" },
-    { day: "Day 2", session: "Afternoon", format: "fourball",   points: 2, course: "stadium", tee: "60" }
+    { day: "Day 1", session: "Morning",   format: "foursomes",  points: 1, course: "tour",    tee: "54", time: "08:00", gap: 10 },
+    { day: "Day 1", session: "Afternoon", format: "chapman",    points: 1, course: "stadium", tee: "60", time: "14:00", gap: 10 },
+    { day: "Day 2", session: "Morning",   format: "greensomes", points: 1, course: "tour",    tee: "54", time: "", gap: 10 },
+    { day: "Day 2", session: "Afternoon", format: "fourball",   points: 2, course: "stadium", tee: "60", time: "", gap: 10 }
   ]
 };
 const COURSE_KEYS = ["tour", "stadium"];
@@ -555,7 +555,14 @@ function matchState(m){
   const rem = 18 - played;
   return Object.assign(st, { status: "live", text: diff === 0 ? "AS" : `${Math.abs(diff)} UP`, dormie: diff !== 0 && Math.abs(diff) === rem });
 }
-function pillText(st){
+// Tee time for a match: the round's first tee time plus the gap for each match before it.
+function teeTime(r, slot){
+  const t = /^(\d{1,2}):(\d{2})$/.exec(String(r.time || "").trim()); if (!t) return "";
+  const mins = +t[1] * 60 + +t[2] + (slot - 1) * (+r.gap || 0);
+  return `${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+}
+function pillText(st, m){
+  if ((st.status === "notstarted" || st.status === "tbc") && m && teeTime(m.r, m.slot)) return { main: teeTime(m.r, m.slot), sub: "Tee time" };
   if (st.status === "tbc") return { main: "–", sub: "TBC" };
   if (st.status === "notstarted") return { main: "–", sub: "Not started" };
   if (st.status === "live") return { main: st.text, sub: st.dormie ? "Dormie" : `Thru ${st.played}` };
@@ -686,11 +693,11 @@ function renderBoard(){
   ev.rounds.forEach((r, i) => {
     const rt = t.rounds[i];
     html += `<section class="round"><div class="rhead"><h2>R${i+1} · ${FORMATS[r.format].label}</h2>
-      <span class="sub">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)}, tee ${esc(teeShort(teeOf(r)).split(" ")[0])} · ${r.points} pt${r.points > 1 ? "s" : ""} per match</span>
+      <span class="sub">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)}, tee ${esc(teeShort(teeOf(r)).split(" ")[0])} · ${r.points} pt${r.points > 1 ? "s" : ""} per match${teeTime(r, 1) ? ` · first tee ${teeTime(r, 1)}${+r.gap ? `, ${+r.gap} min gaps` : ""}` : ""}</span>
       <span class="rule">${esc(handicapRule(r.format))}</span>
       <span class="rscore"><span class="chip" style="background:var(--ta)">${half(rt.A)}</span><span class="chip" style="background:var(--tb)">${half(rt.B)}</span></span></div>`;
     for (const mid of matchIds(i + 1)) {
-      const m = getMatch(mid), st = matchState(m), p = pillText(st);
+      const m = getMatch(mid), st = matchState(m), p = pillText(st, m);
       const col = st.leader ? (st.leader === "A" ? "var(--ta)" : "var(--tb)") : "var(--ink)";
       html += `<button class="mrow" data-act="open" data-id="${mid}" aria-label="Match ${m.slot}">
         ${pairCell(m, "a", st)}
@@ -706,11 +713,11 @@ function renderBoard(){
 // ---------- match view ----------
 function firstOpenHole(m){ for (let h = 1; h <= 18; h++) if (!holeResult(m, h)) return h; return 18; }
 function renderMatch(){
-  const m = getMatch(ui.match), st = matchState(m), p = pillText(st);
+  const m = getMatch(ui.match), st = matchState(m), p = pillText(st, m);
   const col = st.leader ? (st.leader === "A" ? "var(--ta)" : "var(--tb)") : "var(--ink)";
   let html = `<div class="mhead"><button class="back" data-act="close">‹ ${ui.backTo === "live" ? "Live" : "Scoreboard"}</button>
     <h1 class="mtitle">Round ${m.round} · ${FORMATS[m.format].label} · Match ${m.slot}</h1>
-    <p class="hint">${esc(m.r.day)} ${esc(m.r.session)} · ${esc(m.c.name)} course, tee ${esc(teeShort(m.tee))}${m.tee.m ? ` (${teeLength(m.tee)})` : ""} · worth ${m.r.points} pt${m.r.points > 1 ? "s" : ""}. ${FORMATS[m.format].note}</p>
+    <p class="hint">${esc(m.r.day)} ${esc(m.r.session)} · ${esc(m.c.name)} course, tee ${esc(teeShort(m.tee))}${m.tee.m ? ` (${teeLength(m.tee)})` : ""}${teeTime(m.r, m.slot) ? ` · tee time ${teeTime(m.r, m.slot)}` : ""} · worth ${m.r.points} pt${m.r.points > 1 ? "s" : ""}. ${FORMATS[m.format].note}</p>
     <div class="banner">${pairCell(m, "a", st)}<div class="pill${st.status === "final" ? " fin" : ""}" style="color:${col}">${esc(p.main)}<small>${esc(p.sub)}</small></div>${pairCell(m, "b", st)}</div></div>`;
   if (!m.ready) { $app.innerHTML = html + `<div class="empty">This match has no pairing yet. Set it in <b>Setup → Pairings</b>.</div>`; return; }
 
@@ -820,7 +827,7 @@ function renderPlayer(pid){
   const items = r.list.map(({ m, st, side, out }) => {
     const partner = m[side].filter(x => x !== pid).map(pname).join("");
     const opp = m[side === "a" ? "b" : "a"].map(pname).join(" & ");
-    const pt = pillText(st);
+    const pt = pillText(st, m);
     const badge = out ? `<span class="chip" style="background:${out === "W" ? `var(--t${T.toLowerCase()})` : out === "L" ? `var(--t${T === "A" ? "b" : "a"})` : "var(--muted)"}">${out}</span>` : "";
     return `<tr class="click" data-act="open" data-id="${m.id}"><td>R${m.round} ${FORMATS[m.format].label} · ${esc(m.c.name)}<br><small class="hint">with ${esc(partner)} v ${esc(opp)}</small></td><td>${esc(pt.main)} <small class="hint">${esc(pt.sub)}</small></td><td>${badge}</td></tr>`;
   }).join("");
@@ -1848,7 +1855,9 @@ function renderSetup(){
       <label class="f">Format<select id="r-fmt-${i}" ${disabled}>${Object.entries(FORMATS).map(([k, f]) => `<option value="${k}" ${k === r.format ? "selected" : ""}>${f.label}</option>`).join("")}</select></label>
       <label class="f">Course<select id="r-crs-${i}" ${disabled}>${COURSE_KEYS.map(k => `<option value="${k}" ${k === r.course ? "selected" : ""}>${esc(course(k).name)}</option>`).join("")}</select></label>
       <label class="f">Tees<select id="r-tee-${i}" ${disabled}>${teeOpts(r.course, teeOf(r).id)}</select></label>
-      <label class="f">Points per match<input type="number" step="0.5" min="0.5" id="r-pts-${i}" value="${r.points}" ${disabled}></label></div>`).join("")}
+      <label class="f">Points per match<input type="number" step="0.5" min="0.5" id="r-pts-${i}" value="${r.points}" ${disabled}></label>
+      <label class="f">First tee time<input type="time" id="r-time-${i}" value="${esc(r.time || "")}" ${disabled}></label>
+      <label class="f">Minutes between matches<input type="number" min="0" step="1" id="r-gap-${i}" value="${esc(r.gap ?? 10)}" ${disabled}></label></div>`).join("")}
     <div><button class="btn pri" data-act="saveevent">Save event</button></div></section>
 
     <section class="form"><h3>Pairings</h3><p class="hint">Pick two players per side for each match. Shots shown update as you pick.</p>
@@ -1924,7 +1933,7 @@ async function saveEvent(){
   e.venue = val("e-venue").trim();
   e.year = parseInt(val("e-year")) || ev.year;
   e.teams.A = { name: val("e-ta").trim() || "Team 1", color: val("e-ca") }; e.teams.B = { name: val("e-tb").trim() || "Team 2", color: val("e-cb") };
-  e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), tee: val(`r-tee-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1 }));
+  e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), tee: val(`r-tee-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1, time: val(`r-time-${i}`).trim(), gap: Math.max(0, parseInt(val(`r-gap-${i}`)) || 0) }));
   await writeEvent(e, "Event saved");
 }
 async function saveCourse(){
