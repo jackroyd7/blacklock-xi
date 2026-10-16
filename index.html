@@ -342,6 +342,17 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .pinfacts div{background:var(--surface2);border-radius:8px;padding:6px 4px;font-size:.75rem;color:var(--muted)}
 .pinfacts b{display:block;font-family:var(--display);font-size:1.5rem;color:var(--ink);line-height:1.1}
 .pinfacts small{display:block;font-size:.7rem}
+.rhead .rcard{order:1;padding:4px 10px;font-size:.78rem}
+.scard .rtitle{font-family:var(--display);font-weight:700;font-size:1.5rem;letter-spacing:.05em;text-transform:uppercase;line-height:1.1}
+.scard .rm{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.scard .rm:last-child{border-bottom:0}
+.scard .rm .pp{font-weight:600;font-size:.86rem;line-height:1.25;min-width:0;overflow-wrap:anywhere}
+.scard .rm .pp.a{text-align:right} .scard .rm .pp.b{text-align:left}
+.scard .rm .pp.win{font-weight:800}
+.scard .rm .res{display:grid;justify-items:center;gap:2px;min-width:5.2rem}
+.scard .rm .res .chip{font-family:var(--display);font-size:1.15rem;padding:1px 8px;font-weight:700}
+.scard .rm .res b{font-family:var(--display);font-size:1.15rem}
+.scard .rm .res small{font-size:.66rem;color:var(--muted);white-space:nowrap}
 .scard .share{display:flex;justify-content:center;padding:0 14px 14px}
 
 @media (max-width:520px){
@@ -376,7 +387,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-16.5";
+const BUILD = "2026-10-16.6";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -738,7 +749,8 @@ function renderBoard(){
     html += `<section class="round"><div class="rhead"><h2>R${i+1} · ${FORMATS[r.format].label}</h2>
       <span class="sub">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)}, tee ${esc(teeShort(teeOf(r)).split(" ")[0])} · ${r.points} pt${r.points > 1 ? "s" : ""} per match${teeTime(r, 1) ? ` · first tee ${teeTime(r, 1)}${+r.gap ? `, ${+r.gap} min gaps` : ""}` : ""}</span>
       <span class="rule">${esc(handicapRule(r.format))}</span>
-      <span class="rscore"><span class="chip" style="background:var(--ta)">${half(rt.A)}</span><span class="chip" style="background:var(--tb)">${half(rt.B)}</span></span></div>`;
+      <span class="rscore"><span class="chip" style="background:var(--ta)">${half(rt.A)}</span><span class="chip" style="background:var(--tb)">${half(rt.B)}</span></span>
+      <button class="btn rcard" data-act="roundcard" data-n="${i+1}">Results</button></div>`;
     for (const mid of matchIds(i + 1)) {
       const m = getMatch(mid), st = matchState(m), p = pillText(st, m);
       const col = st.leader ? (st.leader === "A" ? "var(--ta-text)" : "var(--tb-text)") : "var(--ink)";
@@ -905,8 +917,38 @@ function renderScores(el){
     <div class="share" data-noshot>${shareFile ? `<button class="btn pri" data-act="sharego">Share image</button>` : `<button class="btn" data-act="sharemake">Share as image</button>`}</div>
   </div></div>`;
 }
+// Results card for one round: every match's result and the round score, shareable as a picture.
+function renderRoundCard(el, n){
+  const t = totals(), A = teamName("A"), B = teamName("B"), r = ev.rounds[n - 1], rt = t.rounds[n - 1];
+  const ms = matchIds(n).map(getMatch), sts = ms.map(matchState);
+  const fin = sts.filter(x => x.status === "final").length, live = sts.filter(x => x.status === "live").length;
+  const state = fin === ms.length ? "Final" : live ? `${live} in play${fin ? `, ${fin} finished` : ""}` : fin ? `${fin} of ${ms.length} finished` : "Not started";
+  const rows = ms.map((m, i) => {
+    const st = sts[i], names = side => m.ready ? m[side].map(sname).join(" &amp; ") : "TBC";
+    let res;
+    if (st.status === "final") res = `<span class="chip" style="background:${st.leader ? `var(--t${st.leader.toLowerCase()})` : "var(--muted)"}">${esc(st.text)}</span><small>${st.leader ? `${esc(teamName(st.leader))} · ${half(m.r.points)} pt${m.r.points === 1 ? "" : "s"}` : `${half(m.r.points / 2)} each`}</small>`;
+    else if (st.status === "live") res = `<b>${esc(st.text)}</b><small>Thru ${st.played}</small>`;
+    else res = `<b>${teeTime(m.r, m.slot) || "–"}</b><small>${teeTime(m.r, m.slot) ? "Tee time" : "Not started"}</small>`;
+    const win = side => st.status === "final" && st.leader === side.toUpperCase() ? ` style="color:var(--t${side}-text)" class="pp ${side} win"` : ` class="pp ${side}"`;
+    return `<div class="rm"><span${win("a")}>${names("a")}</span><span class="res">${res}</span><span${win("b")}>${names("b")}</span></div>`;
+  }).join("");
+  let oa = 0, ob = 0; for (let i = 0; i < n; i++) { oa += t.rounds[i].A; ob += t.rounds[i].B; }
+  el.hidden = false;
+  el.innerHTML = `<div class="modal centre" data-act="closeprofile"><div class="sheet scard" role="dialog" aria-modal="true" aria-labelledby="rc-title">
+    <div class="top"><button class="x" data-act="closeprofile" aria-label="Close" data-noshot>✕</button>
+      <img class="crest" src="logo.png" alt="Blacklock XI crest" width="64" height="64">
+      <span class="ev">${esc(ev.name)} · ${esc(ev.venue)} ${esc(ev.year)}</span>
+      <span class="rtitle" id="rc-title">Round ${n} · ${FORMATS[r.format].label}</span>
+      <div class="totals"><span class="tn a">${esc(A)}</span><span class="big2">${half(rt.A)} – ${half(rt.B)}</span><span class="tn b">${esc(B)}</span></div>
+      <span class="sub2">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)} course · ${esc(state)}</span></div>
+    <div class="rounds">${rows}</div>
+    <div class="foot">Overall after round ${n}: ${esc(A)} ${half(oa)} – ${half(ob)} ${esc(B)}</div>
+    <div class="share" data-noshot>${shareFile ? `<button class="btn pri" data-act="sharego">Share image</button>` : `<button class="btn" data-act="sharemake">Share as image</button>`}</div>
+  </div></div>`;
+}
 function renderModal(){
   const el = document.getElementById("modal");
+  if (ui.roundCard) return renderRoundCard(el, ui.roundCard);
   if (ui.scores) return renderScores(el);
   if (ui.offline) return renderOffline(el);
   const p = ui.profile && players[ui.profile];
@@ -1580,7 +1622,7 @@ async function makeShareImage(btn){
     card.style.maxHeight = "none"; card.style.overflow = "visible";
     const canvas = await window.html2canvas(card, { scale: 2, backgroundColor: getComputedStyle(card).backgroundColor, ignoreElements: el => el.hasAttribute && el.hasAttribute("data-noshot") });
     const blob = await new Promise(r => canvas.toBlob(r, "image/png"));
-    shareFile = new File([blob], `${fileBase()}-score.png`, { type: "image/png" });
+    shareFile = new File([blob], `${fileBase()}-${ui.roundCard ? "round-" + ui.roundCard : "score"}.png`, { type: "image/png" });
   } catch (e) { console.error(e); toast("Couldn't make the image."); }
   finally { card.style.cssText = old; }
   renderModal();
@@ -2265,7 +2307,7 @@ document.addEventListener("click", e => {
     case "close": ui.match = null; if (ui.backTo) { ui.tab = ui.backTo; ui.backTo = null; } saveUi(); render(true); break;
     case "player": ui.profile = null; ui.tab = "players"; ui.player = el.dataset.id || null; saveUi(); render(true); scrollTo(0, 0); break;
     case "profile": ui.profile = el.dataset.id; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
-    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; ui.offline = false; shareFile = null; renderModal(); } break;
+    case "closeprofile": if (e.target === el || el.classList.contains("x")) { ui.profile = null; ui.scores = false; ui.offline = false; ui.roundCard = null; shareFile = null; renderModal(); } break;
     case "scores": ui.scores = true; shareFile = null; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
     case "savebios": saveBios(); break;
     case "hole": { const h = +el.dataset.h; if (h >= 1 && h <= 18) { ui.hole = h; render(); } break; }
@@ -2315,6 +2357,7 @@ document.addEventListener("click", e => {
     case "pingo": { const h = pinUi.h + +el.dataset.d; if (h >= 1 && h <= 18) { pinUi.h = h; pinRender(); } break; }
     case "theme": { const next = { auto: "dark", dark: "light", light: "auto" }[themeNow()]; setTheme(next); renderHeader();
       toast(next === "dark" ? "Night mode on" : next === "light" ? "Day mode on" : "Following your phone's setting"); break; }
+    case "roundcard": ui.roundCard = +el.dataset.n; shareFile = null; renderModal(); document.querySelector(".sheet .x")?.focus(); break;
     case "hmfit": hm.zoom = { k: 1, x: 0, y: 0 }; hmLayout(true); break;
     case "hmtap": { if (!hm.view || hm.dragged) { hm.dragged = false; break; } const r = el.getBoundingClientRect(); hm.target = hm.view.fromScreen(e.clientX - r.left, e.clientY - r.top); hmOverlay(); hmBottom(); break; }
     case "hmclear": hm.target = null; hmOverlay(); hmBottom(); break;
@@ -2368,7 +2411,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" && ui.media) { closeMediaView(); return; }
   if (e.key === "Escape" && hm.open) { hmClose(); return; }
   if (e.key === "Enter" && e.target.id === "ge-q") { geFind(); return; }
-  if (e.key === "Escape" && (ui.profile || ui.scores || ui.offline)) { ui.profile = null; ui.scores = false; ui.offline = false; renderModal(); }
+  if (e.key === "Escape" && (ui.profile || ui.scores || ui.offline || ui.roundCard)) { ui.profile = null; ui.scores = false; ui.offline = false; ui.roundCard = null; renderModal(); }
   if ((e.key === "Enter" || e.key === " ") && e.target.dataset && e.target.dataset.act === "scores") { e.preventDefault(); e.target.click(); }
 });
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "pin") document.querySelector('[data-act="unlock"]')?.click(); });

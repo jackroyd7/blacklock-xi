@@ -65,6 +65,7 @@ Until Storage is set up, the Media tab says so and nothing else changes. Photos 
 - **Live** tab: every hole as it is scored in any match, newest first, with where each match stands. Tap one to open the match. Only holes scored with this version of the app appear.
 - **Match graph** (on each match): who was up after every hole.
 - **Stats:** awards (top points scorer, most holes won, birdies and net birdies, biggest win, best comeback, best partnership), player stats, partnerships and how each hole played against par.
+- **Round results card:** the **Results** button on each round on the Scoreboard opens that round's card (every match result, the round score and the overall score after it), with **Share as image**.
 - **Share as image:** tap the overall score, then **Share as image** and **Share image** to send the score card to WhatsApp or save it.
 
 ## Formats and handicaps
