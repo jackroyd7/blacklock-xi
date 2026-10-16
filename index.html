@@ -51,7 +51,9 @@ button{cursor:pointer}
 
 .top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
 .top .wrap{padding-block:10px 0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-.evline{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 12px}
+.evline{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0 12px}
+.evline .evname{flex:1}
+.evline .evmeta{flex-basis:100%}
 .evname{font-family:var(--display);font-weight:700;font-size:1.35rem;letter-spacing:.02em;text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .evname small{font-family:var(--body);font-weight:500;font-size:.75rem;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px}
 .evmeta{font-size:.78rem;color:var(--muted);white-space:nowrap;flex-shrink:0}
@@ -371,7 +373,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-16.3";
+const BUILD = "2026-10-16.4";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -688,7 +690,7 @@ function renderHeader(){
   const status = t.A.won >= t.toWin ? `${esc(teamName("A"))} win` : t.B.won >= t.toWin ? `${esc(teamName("B"))} win` : `${half(t.toWin)} to win`;
   const tab = (id, label) => `<button data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${label}</button>`;
   $hdr.innerHTML = `
-    <div class="evline"><span class="evname">${esc(ev.name)}<small>${esc(ev.venue)}</small></span><span class="evmeta">${t.live ? '<span class="live-dot"></span>Live · ' : ""}${t.total} pts · ${status}</span>${themeBtn()}</div>
+    <div class="evline"><span class="evname">${esc(ev.name)}<small>${esc(ev.venue)}</small></span>${themeBtn()}<span class="evmeta">${t.live ? '<span class="live-dot"></span>Live · ' : ""}${t.total} pts · ${status}</span></div>
     ${netNote()}
     <div class="board" data-act="scores" role="button" tabindex="0" aria-label="Show the score for each round">
       <div class="side a"><span class="tname">${esc(teamName("A"))}<span class="proj">Projected ${half(t.A.proj)}</span></span><span class="big">${half(t.A.won)}</span></div>
