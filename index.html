@@ -387,7 +387,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-16.7";
+const BUILD = "2026-10-16.6";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -599,8 +599,6 @@ function matchState(m){
 }
 // Tee time for a match: the round's first tee time plus the gap for each match before it.
 function teeTime(r, slot){
-  const own = r.times && /^\d{1,2}:\d{2}$/.test(String(r.times[slot - 1] || "").trim()) ? String(r.times[slot - 1]).trim() : "";
-  if (own) return own.padStart(5, "0");
   const t = /^(\d{1,2}):(\d{2})$/.exec(String(r.time || "").trim()); if (!t) return "";
   const mins = +t[1] * 60 + +t[2] + (slot - 1) * (+r.gap || 0);
   return `${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
@@ -1990,18 +1988,10 @@ function renderSetup(){
       <label class="f">Format<select id="r-fmt-${i}" ${disabled}>${Object.entries(FORMATS).map(([k, f]) => `<option value="${k}" ${k === r.format ? "selected" : ""}>${f.label}</option>`).join("")}</select></label>
       <label class="f">Course<select id="r-crs-${i}" ${disabled}>${COURSE_KEYS.map(k => `<option value="${k}" ${k === r.course ? "selected" : ""}>${esc(course(k).name)}</option>`).join("")}</select></label>
       <label class="f">Tees<select id="r-tee-${i}" ${disabled}>${teeOpts(r.course, teeOf(r).id)}</select></label>
-      <label class="f">Points per match<input type="number" step="0.5" min="0.5" id="r-pts-${i}" value="${r.points}" ${disabled}></label></div>`).join("")}
+      <label class="f">Points per match<input type="number" step="0.5" min="0.5" id="r-pts-${i}" value="${r.points}" ${disabled}></label>
+      <label class="f">First tee time<input type="time" id="r-time-${i}" value="${esc(r.time || "")}" ${disabled}></label>
+      <label class="f">Minutes between matches<input type="number" min="0" step="1" id="r-gap-${i}" value="${esc(r.gap ?? 10)}" ${disabled}></label></div>`).join("")}
     <div><button class="btn pri" data-act="saveevent">Save event</button></div></section>
-
-    <section class="form"><h3>Tee times</h3>
-      <p class="hint">Set the first tee time for each round and the minutes between matches; Match 1 goes first. If a match doesn't follow the pattern, type its own time in the box below it. Leave a round's first tee time empty to hide its tee times.</p>
-      ${ev.rounds.map((r, i) => `<div style="display:grid;gap:6px;padding-block:8px;border-top:1px solid var(--line)">
-        <b>Round ${i+1} · ${FORMATS[r.format].label} <span class="hint">${esc(r.day)} ${esc(r.session)}</span></b>
-        <div class="fgrid">
-          <label class="f">First tee time<input type="time" id="tt-time-${i}" value="${esc(r.time || "")}" ${disabled}></label>
-          <label class="f">Minutes between matches<input type="number" min="0" step="1" inputmode="numeric" id="tt-gap-${i}" value="${esc(r.gap ?? 10)}" ${disabled}></label></div>
-        <div class="fgrid">${[1,2,3,4].map(n => `<label class="f">Match ${n}<input type="time" id="tt-m-${i}-${n}" value="${esc((r.times || [])[n-1] || "")}" ${disabled}><small class="hint" id="tt-p-${i}-${n}">${teeTime(r, n) || "–"}</small></label>`).join("")}</div></div>`).join("")}
-      <div><button class="btn pri" data-act="saveteetimes">Save tee times</button></div></section>
 
     <section class="form"><h3>Pairings</h3><p class="hint">Pick two players per side for each match. Shots shown update as you pick.</p>
       ${pairings}<div><button class="btn pri" data-act="savepairs">Save pairings</button></div></section>
@@ -2076,17 +2066,8 @@ async function saveEvent(){
   e.venue = val("e-venue").trim();
   e.year = parseInt(val("e-year")) || ev.year;
   e.teams.A = { name: val("e-ta").trim() || "Team 1", color: val("e-ca") }; e.teams.B = { name: val("e-tb").trim() || "Team 2", color: val("e-cb") };
-  e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), tee: val(`r-tee-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1, time: r.time || "", gap: r.gap ?? 10, times: r.times || [] }));
+  e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), tee: val(`r-tee-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1, time: val(`r-time-${i}`).trim(), gap: Math.max(0, parseInt(val(`r-gap-${i}`)) || 0) }));
   await writeEvent(e, "Event saved");
-}
-function teeTimesFromForm(i){
-  return { time: val(`tt-time-${i}`).trim(), gap: Math.max(0, parseInt(val(`tt-gap-${i}`)) || 0), times: [1,2,3,4].map(n => val(`tt-m-${i}-${n}`).trim()) };
-}
-async function saveTeeTimes(){
-  if (blocked()) return;
-  const e = clone(ev);
-  e.rounds = e.rounds.map((r, i) => Object.assign({}, r, teeTimesFromForm(i)));
-  await writeEvent(e, "Tee times saved");
 }
 async function saveCourse(){
   if (blocked()) return;
@@ -2345,7 +2326,6 @@ document.addEventListener("click", e => {
     case "update": location.replace(location.pathname + "?u=" + Date.now()); break;
     case "unit": ui.unit = el.dataset.u; saveUi(); render(true); break;
     case "saveevent": saveEvent(); break;
-    case "saveteetimes": saveTeeTimes(); break;
     case "savehcps": saveHcps(); break;
     case "refreshhcp": if (!blocked()) fs.doc("matches/" + ui.match).update({ hcp: null }).then(() => toast("Match now uses the new handicaps"), onWriteError); break;
     case "savecourse": saveCourse(); break;
@@ -2401,12 +2381,6 @@ document.addEventListener("click", e => {
 let setupDirty = false;
 document.addEventListener("input", e => { if (e.target.id === "cc-index") { ui.cc = { index: e.target.value }; saveUi(); document.getElementById("cc-out").innerHTML = ccRows(parseIndex(e.target.value)); } });
 document.addEventListener("input", e => { if (ui.tab === "setup" && e.target.closest("main")) setupDirty = true; });
-// Tee times in Setup: show each match's time as the boxes are filled in.
-document.addEventListener("input", e => {
-  const m = /^tt-(?:time|gap|m)-(\d)/.exec(e.target.id || ""); if (!m) return;
-  const i = +m[1], r = Object.assign({}, ev.rounds[i], teeTimesFromForm(i));
-  for (let n = 1; n <= 4; n++) { const p = document.getElementById(`tt-p-${i}-${n}`); if (p) p.textContent = teeTime(r, n) || "–"; }
-});
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "restore-file") { readRestoreFile(t.files[0]); return; }

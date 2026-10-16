@@ -82,7 +82,7 @@ Until Storage is set up, the Media tab says so and nothing else changes. Photos 
 - Chapman and Greensomes: 60% of the lower + 40% of the higher course handicap, difference between pairs as shots
 - Handicaps are locked into a match when its first score is entered
 
-- Tee times: R1 from 08:00 and R2 from 14:00, 10 minutes apart (Match 1 first). Set R3 and R4, or change any of them, in **Setup → Tee times** (first tee time and minutes between matches, or a time for an individual match). Matches that haven't started show their tee time on the Scoreboard.
+- Tee times: R1 from 08:00 and R2 from 14:00, 10 minutes apart (Match 1 first). Set R3 and R4, or change any of them, in **Setup → Rounds** (first tee time and minutes between matches). Matches that haven't started show their tee time on the Scoreboard.
 
 All of this is editable in Setup.
 
