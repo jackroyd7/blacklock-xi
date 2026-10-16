@@ -387,7 +387,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-16.8";
+const BUILD = "2026-10-16.9";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -1904,7 +1904,11 @@ const PINS = {
   tour: { title: "Pin position 1", sheet: "pins/tour-sheet.jpg", holes: {
     1: [24, "C", 34], 2: [17, "R3", 32], 3: [7, "R6", 29], 4: [21, "L3", 29], 5: [5, "L4", 34], 6: [13, "R3", 29],
     7: [6, "R7", 23], 8: [18, "C", 29], 9: [14, "C", 24], 10: [14, "C", 32], 11: [22, "L5", 33], 12: [25, "L6", 30],
-    13: [24, "R4", 33], 14: [7, "L5", 30], 15: [9, "L10", 31], 16: [22, "C", 28], 17: [29, "R4", 31], 18: [28, "L4", 33] } }
+    13: [24, "R4", 33], 14: [7, "L5", 30], 15: [9, "L10", 31], 16: [22, "C", 28], 17: [29, "R4", 31], 18: [28, "L4", 33] } },
+  stadium: { title: "Pin position 1", sheet: "pins/stadium-sheet.jpg", holes: {
+    1: [14, "L8", 32], 2: [30, "R4", 33], 3: [5, "C", 31], 4: [8, "R3", 24], 5: [17, "L6", 33], 6: [7, "R3", 36],
+    7: [23, "L4", 31], 8: [30, "R4", 33], 9: [7, "L6", 22], 10: [23, "L4", 31], 11: [12, "R13", 25], 12: [13, "L6", 36],
+    13: [8, "R5", 25], 14: [7, "R5", 32], 15: [11, "R6", 30], 16: [18, "R8", 26], 17: [17, "L8", 30], 18: [20, "L4", 30] } }
 };
 function pinOf(k, h){
   const s = PINS[k], p = s && s.holes[h]; if (!p) return null;
