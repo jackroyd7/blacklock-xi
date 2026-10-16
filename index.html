@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Blacklock XI">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
+<script>try { const t = localStorage.getItem("bx-theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch {}</script>
 <title>Blacklock XI</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -26,9 +27,18 @@
   --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --r:10px;
 }
-@media (prefers-color-scheme: dark){:root{
+/* Night mode: follows the phone unless the viewer picks Night or Day with the header button (data-theme). */
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0c130f; --surface:#141e18; --surface2:#1a261f; --ink:#e5ece6; --muted:#93a399; --line:#27352d;
   --accent:#5cc28c; --warn:#f2c14e; --warn-bg:#33290f; --bad:#ff8a80; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0c130f; --surface:#141e18; --surface2:#1a261f; --ink:#e5ece6; --muted:#93a399; --line:#27352d;
+  --accent:#5cc28c; --warn:#f2c14e; --warn-bg:#33290f; --bad:#ff8a80; color-scheme:dark }
+/* Team colours as text: as set in Setup by day, lightened at night so they stay readable on the dark background */
+:root{--ta-text:var(--ta);--tb-text:var(--tb)}
+:root[data-theme="dark"]{--ta-text:color-mix(in srgb,var(--ta) 55%,#fff);--tb-text:color-mix(in srgb,var(--tb) 60%,#fff)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ta-text:color-mix(in srgb,var(--ta) 55%,#fff);--tb-text:color-mix(in srgb,var(--tb) 60%,#fff)}}
+.thm{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:3px 10px;font-size:.78rem;font-weight:600;white-space:nowrap;align-self:center}
 *{box-sizing:border-box}
 html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
@@ -361,7 +371,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-16.1";
+const BUILD = "2026-10-16.3";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -660,13 +670,25 @@ function netNote(){
   if (w) return `<div class="net">Sending scores…</div>`;
   return "";
 }
+// Night mode switch: Auto (follow the phone) → Night → Day, remembered on this phone.
+function themeNow(){ return document.documentElement.dataset.theme || "auto"; }
+function themeBtn(){
+  const t = themeNow(), label = { auto: "◐ Auto", dark: "☾ Night", light: "☀ Day" }[t];
+  return `<button class="thm" data-act="theme" aria-label="Colour mode: ${label.slice(2)}. Tap to change.">${label}</button>`;
+}
+function setTheme(t){
+  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  try { if (t === "auto") localStorage.removeItem("bx-theme"); else localStorage.setItem("bx-theme", t); } catch {}
+  const dark = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#0c130f" : "#1d4f91");
+}
 function renderHeader(){
   const t = totals();
   const pct = v => (v / t.total * 100).toFixed(2) + "%";
   const status = t.A.won >= t.toWin ? `${esc(teamName("A"))} win` : t.B.won >= t.toWin ? `${esc(teamName("B"))} win` : `${half(t.toWin)} to win`;
   const tab = (id, label) => `<button data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${label}</button>`;
   $hdr.innerHTML = `
-    <div class="evline"><span class="evname">${esc(ev.name)}<small>${esc(ev.venue)}</small></span><span class="evmeta">${t.live ? '<span class="live-dot"></span>Live · ' : ""}${t.total} pts · ${status}</span></div>
+    <div class="evline"><span class="evname">${esc(ev.name)}<small>${esc(ev.venue)}</small></span><span class="evmeta">${t.live ? '<span class="live-dot"></span>Live · ' : ""}${t.total} pts · ${status}</span>${themeBtn()}</div>
     ${netNote()}
     <div class="board" data-act="scores" role="button" tabindex="0" aria-label="Show the score for each round">
       <div class="side a"><span class="tname">${esc(teamName("A"))}<span class="proj">Projected ${half(t.A.proj)}</span></span><span class="big">${half(t.A.won)}</span></div>
@@ -714,7 +736,7 @@ function renderBoard(){
       <span class="rscore"><span class="chip" style="background:var(--ta)">${half(rt.A)}</span><span class="chip" style="background:var(--tb)">${half(rt.B)}</span></span></div>`;
     for (const mid of matchIds(i + 1)) {
       const m = getMatch(mid), st = matchState(m), p = pillText(st, m);
-      const col = st.leader ? (st.leader === "A" ? "var(--ta)" : "var(--tb)") : "var(--ink)";
+      const col = st.leader ? (st.leader === "A" ? "var(--ta-text)" : "var(--tb-text)") : "var(--ink)";
       html += `<button class="mrow" data-act="open" data-id="${mid}" aria-label="Match ${m.slot}">
         ${pairCell(m, "a", st)}
         <div class="pill${st.status === "final" ? " fin" : ""}" style="color:${col}">${esc(p.main)}<small>${esc(p.sub)}</small></div>
@@ -730,7 +752,7 @@ function renderBoard(){
 function firstOpenHole(m){ for (let h = 1; h <= 18; h++) if (!holeResult(m, h)) return h; return 18; }
 function renderMatch(){
   const m = getMatch(ui.match), st = matchState(m), p = pillText(st, m);
-  const col = st.leader ? (st.leader === "A" ? "var(--ta)" : "var(--tb)") : "var(--ink)";
+  const col = st.leader ? (st.leader === "A" ? "var(--ta-text)" : "var(--tb-text)") : "var(--ink)";
   let html = `<div class="mhead"><button class="back" data-act="close">‹ ${ui.backTo === "live" ? "Live" : "Scoreboard"}</button>
     <h1 class="mtitle">Round ${m.round} · ${FORMATS[m.format].label} · Match ${m.slot}</h1>
     <p class="hint">${esc(m.r.day)} ${esc(m.r.session)} · ${esc(m.c.name)} course, tee ${esc(teeShort(m.tee))}${m.tee.m ? ` (${teeLength(m.tee)})` : ""}${teeTime(m.r, m.slot) ? ` · tee time ${teeTime(m.r, m.slot)}` : ""} · worth ${m.r.points} pt${m.r.points > 1 ? "s" : ""}. ${FORMATS[m.format].note}</p>
@@ -2286,6 +2308,8 @@ document.addEventListener("click", e => {
     case "pinopen": pinOpen(el.dataset.k, el.dataset.h ? +el.dataset.h : null); break;
     case "pinclose": if (e.target === el || el.classList.contains("x")) pinClose(); break;
     case "pingo": { const h = pinUi.h + +el.dataset.d; if (h >= 1 && h <= 18) { pinUi.h = h; pinRender(); } break; }
+    case "theme": { const next = { auto: "dark", dark: "light", light: "auto" }[themeNow()]; setTheme(next); renderHeader();
+      toast(next === "dark" ? "Night mode on" : next === "light" ? "Day mode on" : "Following your phone's setting"); break; }
     case "hmfit": hm.zoom = { k: 1, x: 0, y: 0 }; hmLayout(true); break;
     case "hmtap": { if (!hm.view || hm.dragged) { hm.dragged = false; break; } const r = el.getBoundingClientRect(); hm.target = hm.view.fromScreen(e.clientX - r.left, e.clientY - r.top); hmOverlay(); hmBottom(); break; }
     case "hmclear": hm.target = null; hmOverlay(); hmBottom(); break;
@@ -2345,6 +2369,7 @@ document.addEventListener("keydown", e => {
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "pin") document.querySelector('[data-act="unlock"]')?.click(); });
 
 // ---------- boot ----------
+setTheme(themeNow());
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(e => console.warn("Offline support unavailable:", e));
 if (!["board","live","photos","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
 if (ui.match && !/^r[1-4]m[1-4]$/.test(ui.match)) ui.match = null;
