@@ -40,6 +40,9 @@ Once a hole is mapped:
 
 The photos are Esri World Imagery. The points are saved in the event document, so they're included in the full backup.
 
+## Pin positions
+The Tour course pin sheet (pin position 1) is built in: a **Pin** button on the hole map and on the scoring screen opens that hole's drawing from the sheet, with the flag's distance on from the front, left/right of centre and the green depth (metres, as on the sheet). **Course tab → Pin sheet** shows the whole sheet. The pictures are in `pins/` and the numbers in `PINS` near the top of the pin-sheet section of `index.html`. When the pins move, send a photo of the new sheet and it can be swapped in the same way.
+
 ## Photos and videos
 The **Media** tab lets anyone add photos and videos for everyone to see, with an optional caption, their name and the match it's from. Items tagged to a match also appear on that match's screen. Photos are shrunk on the phone before uploading (about 300 KB each). Videos upload as they are, up to 200 MB, so film in 1080p rather than 4K. Uploads need signal. People can delete what they added, and organisers (Setup unlocked) can delete anything.
 
