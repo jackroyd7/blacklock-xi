@@ -364,6 +364,12 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .blrow .pts{display:grid;grid-template-columns:3.6rem .8rem 3.6rem;text-align:center;align-items:center;font-variant-numeric:tabular-nums}
 .blrow .pts b{font-family:var(--display);font-size:1.25rem}
 .blrow.head .pts span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drv{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.drvh{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.drvrow{display:grid;grid-template-columns:4px 1fr 1fr;gap:8px;align-items:stretch}
+.drvrow .stripe{border-radius:2px}
+.drvrow button{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 6px;font-weight:600;font-size:.9rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drvrow button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .scard .share{display:flex;justify-content:center;padding:0 14px 14px}
 
 @media (max-width:520px){
@@ -398,7 +404,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-17.2";
+const BUILD = "2026-10-17.3";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -571,6 +577,13 @@ function getMatch(mid){
   }
   return m;
 }
+// Greensomes: whose tee shot each side played on, stored per hole as da/db = 0 or 1 (index into the pair).
+function drivesUsed(m, side){
+  const n = [0, 0];
+  for (let h = 1; h <= 18; h++) { const d = (m.scores[h] || {})["d" + side]; if (d === 0 || d === 1) n[d]++; }
+  return n;
+}
+function driveTag(m, side, i){ const nm = sname(m[side][i]); return nm.length > 4 ? nm.slice(0, 3) : nm; }
 function entryKeys(m){ return m.format === "fourball" ? ["a0","a1","b0","b1"] : ["a","b"]; }
 function shotsForKey(m, k){ return k.length === 2 ? m.shots[k[0]][+k[1]] : m.shots[k][0]; }
 function keyLabel(m, k){ return k.length === 2 ? sname(m[k[0]][+k[1]]) : m[k].map(sname).join(" / "); }
@@ -667,7 +680,7 @@ function onWriteError(e){
 function queueScore(mid, h, key, val){
   if (blocked()) return;
   pending[mid] = pending[mid] || {}; pending[mid][h] = pending[mid][h] || {}; pending[mid][h][key] = val;
-  if (val != null) pending[mid][h].t = Date.now(); // when the hole was last scored, for the Latest feed
+  if (val != null && !/^d[ab]$/.test(key)) pending[mid][h].t = Date.now(); // when the hole was last scored, for the Latest feed
   render();
   clearTimeout(timers[mid]); timers[mid] = setTimeout(() => flush(mid), 450);
 }
@@ -793,6 +806,7 @@ function renderMatch(){
   const pcard = side => {
     const T = side === "a" ? "A" : "B";
     let rows = m[side].map((id, i) => `<div class="ln"><span>${esc(sname(id))}</span><span class="num">CH ${fmtHcp(m.ch[side][i])}${hcpOverride(id, m.round) != null ? "*" : ""}${m.format === "fourball" ? ` · PH ${fmtHcp(m.ph[side][i])} · <b>${m.shots[side][i]} shots</b>` : ""}</span></div>`).join("");
+    if (m.format === "greensomes") { const n = drivesUsed(m, side); rows += `<div class="ln"><span>Drives used</span><span class="num">${m[side].map((id, i) => `${esc(sname(id))} <b>${n[i]}</b>`).join(" · ")}</span></div>`; }
     if (m.format !== "fourball") rows += `<div class="ln"><span>Pair handicap ${fmtHcp(m.ph[side][0])}</span><b class="num">${m.shots[side][0]} shots</b></div>`;
     return `<div class="card"><span class="t" style="color:var(--t${side})">${esc(teamName(T))}</span>${rows}</div>`;
   };
@@ -825,6 +839,10 @@ function renderMatch(){
     html += `<div class="erow${r && r.quick ? " muted" : ""}"><span class="stripe" style="background:var(--t${T})"></span>
       <span class="who"><b>${esc(keyLabel(m, k))}</b><small>${n ? `<span class="dots">${"●".repeat(n)}</span> ${n} shot${n > 1 ? "s" : ""}` : "No shot"}${net}</small></span>
       <span class="step">${ro ? "" : `<button data-act="dec" data-k="${k}" aria-label="One less">−</button>`}<span class="val num${v === "x" ? " x" : ""}">${vtxt}</span>${ro ? "" : `<button data-act="inc" data-k="${k}" aria-label="One more">+</button><button class="pu" data-act="pu" data-k="${k}" aria-pressed="${v === "x"}">P/U</button>`}</span></div>`;
+  }
+  if (m.format === "greensomes") {
+    html += `<div class="drv"><span class="drvh">Whose drive?</span>` + ["a", "b"].map(side => `<div class="drvrow"><span class="stripe" style="background:var(--t${side})"></span>` +
+      m[side].map((id, i) => `<button data-act="drive" data-side="${side}" data-i="${i}" aria-pressed="${s["d" + side] === i}" ${ro ? "disabled" : ""}>${esc(sname(id))}</button>`).join("") + `</div>`).join("") + `</div>`;
   }
   let resTxt = "Enter a score for every ball to settle the hole.";
   if (r) {
@@ -859,9 +877,10 @@ function scorecard(m, st){
     }).join("");
     return `<tr><td style="border-left:4px solid var(--t${k[0]})">${esc(keyLabel(m, k))}</td>${cells}<td class="tot">${any ? tot : ""}</td></tr>`;
   }).join("");
+  const drv = m.format !== "greensomes" ? "" : ["a", "b"].map(side => `<tr><td class="lbl" style="border-left:4px solid var(--t${side})">Drive</td>${H.map(h => { const d = (m.scores[h] || {})["d" + side]; return `<td class="hint">${d === 0 || d === 1 ? esc(driveTag(m, side, d)) : ""}</td>`; }).join("")}<td class="tot"></td></tr>`).join("");
   const res = `<tr><td class="lbl">Hole won</td>${H.map(h => { const r = st.res[h]; if (!r) return "<td></td>"; return r.w === "H" ? `<td class="rh">½</td>` : `<td class="r${r.w.toLowerCase()}">${esc(teamName(r.w)[0] || r.w)}</td>`; }).join("")}<td class="tot"></td></tr>`;
   const stat = `<tr><td class="lbl">Match</td>${H.map(h => { const a = st.after[h]; if (a == null) return "<td></td>"; return a === 0 ? `<td class="rh">AS</td>` : `<td style="color:var(--t${a > 0 ? "a" : "b"});font-weight:700">${Math.abs(a)}</td>`; }).join("")}<td class="tot"></td></tr>`;
-  return `<div class="card"><div class="scroll"><table class="sc"><thead>${head}</thead><tbody>${par}${si}${rows}${res}${stat}</tbody></table></div></div>
+  return `<div class="card"><div class="scroll"><table class="sc"><thead>${head}</thead><tbody>${par}${si}${rows}${drv}${res}${stat}</tbody></table></div></div>
     <p class="hint">Dots mark shots received on a hole. ${m.format === "fourball" ? "Underlined scores are the ball that counted. " : ""}– means picked up. A hole result with no strokes was entered directly.</p>`;
 }
 
@@ -2420,7 +2439,8 @@ document.addEventListener("click", e => {
       else v = Math.max(1, Math.min(15, cur + (act === "inc" ? 1 : -1)));
       queueScore(ui.match, String(ui.hole), k, v); break;
     }
-    case "clearhole": { for (const k of [...entryKeys(m), "w", "t"]) queueScore(ui.match, String(ui.hole), k, null); break; }
+    case "drive": { const k = "d" + el.dataset.side, i = +el.dataset.i, cur = (m.scores[ui.hole] || {})[k]; queueScore(ui.match, String(ui.hole), k, cur === i ? null : i); break; }
+    case "clearhole": { for (const k of [...entryKeys(m), "w", "t", "da", "db"]) queueScore(ui.match, String(ui.hole), k, null); break; }
     case "quick": { const cur = (m.scores[ui.hole] || {}).w; queueScore(ui.match, String(ui.hole), "w", cur === el.dataset.w ? null : el.dataset.w); break; }
     case "unlock": pinMatches(val("pin")).then(ok => { if (ok) { ui.unlocked = true; saveUi(); render(true); } else toast("That PIN isn't right."); }); break;
     case "lock": ui.unlocked = false; saveUi(); render(true); toast("Setup locked on this phone"); break;
