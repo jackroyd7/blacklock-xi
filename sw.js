@@ -23,7 +23,7 @@ self.addEventListener("install", e => {
     const app = await caches.open(APP);
     await app.addAll(CORE);
     // The pin sheet pictures, so the Pin popup works with no signal.
-    await Promise.all(["tour", "stadium"].flatMap(c => [`pins/${c}-sheet.jpg`, ...Array.from({ length: 18 }, (_, i) => `pins/${c}-${i + 1}.jpg`)]).map(u => app.add(u).catch(() => {})));
+    await Promise.all(["tour2", "stadium"].flatMap(c => [`pins/${c}-sheet.jpg`, ...Array.from({ length: 18 }, (_, i) => `pins/${c}-${i + 1}.jpg`)]).map(u => app.add(u).catch(() => {})));
     // Nice to have offline; a failure here mustn't stop the app installing.
     await Promise.all(EXTRA.map(u => put(LIBS, u)));
     const css = await put(LIBS, FONTS_CSS);
