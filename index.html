@@ -370,6 +370,16 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .drvrow .stripe{border-radius:2px}
 .drvrow button{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 6px;font-weight:600;font-size:.9rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .drvrow button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.big.dec{font-size:2.1rem}
+@media (max-width:520px){.big.dec{font-size:1.4rem}}
+.scard .totals .big2.dec{font-size:1.6rem}
+.scard .totals.dec{gap:6px}
+.scard .totals.dec .tn{font-size:.82rem;letter-spacing:.03em}
+.board.dec .tname{font-size:.82rem;letter-spacing:.03em}
+.board.dec .side{padding-inline:10px;gap:6px}
+.finalbanner{display:grid;gap:4px;background:var(--surface);border:2px solid var(--accent);border-radius:var(--r);padding:12px 14px;text-align:center}
+.finalbanner b{font-family:var(--display);font-size:1.4rem;text-transform:uppercase;letter-spacing:.03em}
+.finalbanner span{font-size:.85rem;color:var(--muted)}
 .scard .share{display:flex;justify-content:center;padding:0 14px 14px}
 
 @media (max-width:520px){
@@ -404,7 +414,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-17.4";
+const BUILD = "2026-10-17.6";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -489,6 +499,7 @@ function mergeEvent(d){
   }
   Object.assign(e.allow, d.allow || {});
   if (Array.isArray(d.rounds) && d.rounds.length === 4) e.rounds = d.rounds.map((r, i) => Object.assign({}, e.rounds[i], r));
+  if (d.final && d.final.m) e.final = d.final;
   return e;
 }
 function parseIndex(s){ s = String(s ?? "").trim(); if (s === "") return null; const plus = s.startsWith("+"); const n = parseFloat(s.replace("+","")); return isFinite(n) ? (plus ? -n : n) : null; }
@@ -641,14 +652,19 @@ function matchPoints(m, st, projected){
   }
   return out;
 }
+// A declared final result (play abandoned) fixes each unfinished match at its Blacklock-Lewis share.
+function finalShare(mid){ return ev.final && ev.final.m && ev.final.m[mid] || null; }
+// Points: halves as ½, anything else (rain-rule shares) to 2 decimal places.
+function fmtPts(n){ return Math.abs(n * 2 - Math.round(n * 2)) < 1e-9 ? half(n) : n.toFixed(2); }
 function totals(){
-  const t = { A: { won: 0, proj: 0 }, B: { won: 0, proj: 0 }, total: 0, rounds: [], live: false };
+  const t = { A: { won: 0, proj: 0 }, B: { won: 0, proj: 0 }, total: 0, rounds: [], live: false, final: !!ev.final };
   ev.rounds.forEach((r, i) => {
     const rt = { A: 0, B: 0 };
     for (const mid of matchIds(i + 1)) {
       t.total += r.points;
-      const m = getMatch(mid), st = matchState(m), w = matchPoints(m, st, false), p = matchPoints(m, st, true);
-      if (st.status === "live") t.live = true;
+      const m = getMatch(mid), st = matchState(m), fs = finalShare(mid);
+      const w = fs ? { A: fs.a, B: fs.b } : matchPoints(m, st, false), p = fs ? w : matchPoints(m, st, true);
+      if (st.status === "live" && !fs) t.live = true;
       t.A.won += w.A; t.B.won += w.B; t.A.proj += p.A; t.B.proj += p.B; rt.A += w.A; rt.B += w.B;
     }
     t.rounds.push(rt);
@@ -725,14 +741,15 @@ function setTheme(t){
 function renderHeader(){
   const t = totals();
   const pct = v => (v / t.total * 100).toFixed(2) + "%";
-  const status = t.A.won >= t.toWin ? `${esc(teamName("A"))} win` : t.B.won >= t.toWin ? `${esc(teamName("B"))} win` : `${half(t.toWin)} to win`;
+  const status = t.final ? (t.A.won > t.B.won ? `Final · ${esc(teamName("A"))} win` : t.B.won > t.A.won ? `Final · ${esc(teamName("B"))} win` : "Final · tied")
+    : t.A.won >= t.toWin ? `${esc(teamName("A"))} win` : t.B.won >= t.toWin ? `${esc(teamName("B"))} win` : `${half(t.toWin)} to win`;
   const tab = (id, label) => `<button data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${label}</button>`;
   $hdr.innerHTML = `
     <div class="evline"><span class="evname">${esc(ev.name)}</span>${themeBtn()}<span class="evmeta">${ev.venue ? `${esc(ev.venue)} · ` : ""}${t.live ? '<span class="live-dot"></span>Live · ' : ""}${t.total} pts · ${status}</span></div>
     ${netNote()}
-    <div class="board" data-act="scores" role="button" tabindex="0" aria-label="Show the score for each round">
-      <div class="side a"><span class="tname">${esc(teamName("A"))}<span class="proj">Projected ${half(t.A.proj)}</span></span><span class="big">${half(t.A.won)}</span></div>
-      <div class="side b"><span class="big">${half(t.B.won)}</span><span class="tname">${esc(teamName("B"))}<span class="proj">Projected ${half(t.B.proj)}</span></span></div>
+    <div class="board${t.final ? " dec" : ""}" data-act="scores" role="button" tabindex="0" aria-label="Show the score for each round">
+      <div class="side a"><span class="tname">${esc(teamName("A"))}<span class="proj">${t.final ? "Final" : `Projected ${half(t.A.proj)}`}</span></span><span class="big${t.final ? " dec" : ""}">${fmtPts(t.A.won)}</span></div>
+      <div class="side b"><span class="big${t.final ? " dec" : ""}">${fmtPts(t.B.won)}</span><span class="tname">${esc(teamName("B"))}<span class="proj">${t.final ? "Final" : `Projected ${half(t.B.proj)}`}</span></span></div>
     </div>
     <div class="bar" aria-label="Points progress">
       <i style="left:0;width:${pct(t.A.proj)};background:var(--ta);opacity:.35"></i>
@@ -766,6 +783,8 @@ function renderBoard(){
   const t = totals();
   let html = "";
   if (noDb) html += `<div class="notice"><b>Not connected.</b> Scores can't load until the Firebase settings are added to <code>config.js</code>. See the README.</div>`;
+  if (t.final) html += `<div class="finalbanner"><b>Final result: ${t.A.won > t.B.won ? `${esc(teamName("A"))} win ${fmtPts(t.A.won)} – ${fmtPts(t.B.won)}` : t.B.won > t.A.won ? `${esc(teamName("B"))} win ${fmtPts(t.B.won)} – ${fmtPts(t.A.won)}` : `tied ${fmtPts(t.A.won)} – ${fmtPts(t.B.won)}`}</b>
+    <span>${esc(ev.final.note || "Play was abandoned. Unfinished matches were settled with the Blacklock-Lewis table.")}</span></div>`;
   html += installTipBanner();
   if (!noDb && loaded.p && !Object.keys(players).length) html += `<div class="empty">No players yet. Add both teams and their handicaps in <b>Setup</b>, then set the pairings for each round. Matches appear here as soon as pairings are saved.</div>`;
   ev.rounds.forEach((r, i) => {
@@ -773,10 +792,10 @@ function renderBoard(){
     html += `<section class="round"><div class="rhead"><h2>R${i+1} · ${FORMATS[r.format].label}</h2>
       <span class="sub">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)}, tee ${esc(teeShort(teeOf(r)).split(" ")[0])} · ${r.points} pt${r.points > 1 ? "s" : ""} per match${teeTime(r, 1) ? ` · first tee ${teeTime(r, 1)}${+r.gap ? `, ${+r.gap} min gaps` : ""}` : ""}</span>
       <span class="rule">${esc(handicapRule(r.format))}</span>
-      <span class="rscore"><span class="chip" style="background:var(--ta)">${half(rt.A)}</span><span class="chip" style="background:var(--tb)">${half(rt.B)}</span></span>
+      <span class="rscore"><span class="chip" style="background:var(--ta)">${fmtPts(rt.A)}</span><span class="chip" style="background:var(--tb)">${fmtPts(rt.B)}</span></span>
       <button class="btn rcard" data-act="roundcard" data-n="${i+1}">Results</button></div>`;
     for (const mid of matchIds(i + 1)) {
-      const m = getMatch(mid), st = matchState(m), p = pillText(st, m);
+      const m = getMatch(mid), st = matchState(m), fs = finalShare(mid), p = fs ? { main: st.status === "live" ? st.text : "–", sub: `Stopped · ${fmtPts(fs.a)}–${fmtPts(fs.b)}` } : pillText(st, m);
       const col = st.leader ? (st.leader === "A" ? "var(--ta-text)" : "var(--tb-text)") : "var(--ink)";
       html += `<button class="mrow" data-act="open" data-id="${mid}" aria-label="Match ${m.slot}">
         ${pairCell(m, "a", st)}
@@ -925,22 +944,23 @@ function renderPlayer(pid){
 
 function renderScores(el){
   const t = totals(), A = teamName("A"), B = teamName("B");
-  const line = (a, b) => `<span class="sc2"><span class="tl a">${esc(A)}</span><span class="chip" style="background:var(--ta)">${half(a)}</span>–<span class="chip" style="background:var(--tb)">${half(b)}</span><span class="tl b">${esc(B)}</span></span>`;
+  const line = (a, b) => `<span class="sc2"><span class="tl a">${esc(A)}</span><span class="chip" style="background:var(--ta)">${fmtPts(a)}</span>–<span class="chip" style="background:var(--tb)">${fmtPts(b)}</span><span class="tl b">${esc(B)}</span></span>`;
   const rows = ev.rounds.map((r, i) => {
     const ms = matchIds(i + 1).map(getMatch), sts = ms.map(matchState);
     const fin = sts.filter(x => x.status === "final").length, live = sts.filter(x => x.status === "live").length;
-    const state = fin === ms.length ? "Complete" : live ? `${live} in play${fin ? `, ${fin} finished` : ""}` : fin ? `${fin} of ${ms.length} finished` : "Not started";
+    const state = ms.some(m => finalShare(m.id)) ? "Final · rain rule" : fin === ms.length ? "Complete" : live ? `${live} in play${fin ? `, ${fin} finished` : ""}` : fin ? `${fin} of ${ms.length} finished` : "Not started";
     return `<div class="rr"><span class="rn">R${i+1} · ${FORMATS[r.format].label}</span>${line(t.rounds[i].A, t.rounds[i].B)}
       <span class="rd">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)} · ${esc(state)}</span></div>`;
   }).join("");
-  const status = t.A.won >= t.toWin ? `${esc(A)} win the ${esc(ev.name)}` : t.B.won >= t.toWin ? `${esc(B)} win the ${esc(ev.name)}` : `${t.total} points · ${half(t.toWin)} to win`;
+  const status = t.final ? `${t.A.won > t.B.won ? `${esc(A)} win the ${esc(ev.name)}` : t.B.won > t.A.won ? `${esc(B)} win the ${esc(ev.name)}` : "Tied"} · final, rain rule`
+    : t.A.won >= t.toWin ? `${esc(A)} win the ${esc(ev.name)}` : t.B.won >= t.toWin ? `${esc(B)} win the ${esc(ev.name)}` : `${t.total} points · ${half(t.toWin)} to win`;
   const anyLive = Math.abs(t.A.proj - t.A.won) + Math.abs(t.B.proj - t.B.won) > 0;
   el.hidden = false;
   el.innerHTML = `<div class="modal centre" data-act="closeprofile"><div class="sheet scard" role="dialog" aria-modal="true" aria-labelledby="sc-title">
     <div class="top"><button class="x" data-act="closeprofile" aria-label="Close" data-noshot>✕</button>
       <img class="crest" src="logo.png" alt="Blacklock XI crest" width="64" height="64">
       <span class="ev" id="sc-title">${esc(ev.name)} · ${esc(ev.venue)} ${esc(ev.year)}</span>
-      <div class="totals"><span class="tn a">${esc(A)}</span><span class="big2">${half(t.A.won)} – ${half(t.B.won)}</span><span class="tn b">${esc(B)}</span></div>
+      <div class="totals${t.final ? " dec" : ""}"><span class="tn a">${esc(A)}</span><span class="big2${t.final ? " dec" : ""}">${fmtPts(t.A.won)} – ${fmtPts(t.B.won)}</span><span class="tn b">${esc(B)}</span></div>
       <span class="sub2">${status}</span></div>
     <div class="rounds">${rows}</div>
     ${anyLive ? `<div class="foot">Projected if live matches finish as they stand: ${esc(A)} ${half(t.A.proj)} – ${half(t.B.proj)} ${esc(B)}</div>` : ""}
@@ -952,11 +972,13 @@ function renderRoundCard(el, n){
   const t = totals(), A = teamName("A"), B = teamName("B"), r = ev.rounds[n - 1], rt = t.rounds[n - 1];
   const ms = matchIds(n).map(getMatch), sts = ms.map(matchState);
   const fin = sts.filter(x => x.status === "final").length, live = sts.filter(x => x.status === "live").length;
-  const state = fin === ms.length ? "Final" : live ? `${live} in play${fin ? `, ${fin} finished` : ""}` : fin ? `${fin} of ${ms.length} finished` : "Not started";
+  const state = ms.some(m => finalShare(m.id)) ? "Final · rain rule" : fin === ms.length ? "Final" : live ? `${live} in play${fin ? `, ${fin} finished` : ""}` : fin ? `${fin} of ${ms.length} finished` : "Not started";
   const rows = ms.map((m, i) => {
     const st = sts[i], names = side => m.ready ? m[side].map(sname).join(" &amp; ") : "TBC";
     let res;
-    if (st.status === "final") res = `<span class="chip" style="background:${st.leader ? `var(--t${st.leader.toLowerCase()})` : "var(--muted)"}">${esc(st.text)}</span><small>${st.leader ? `${esc(teamName(st.leader))} · ${half(m.r.points)} pt${m.r.points === 1 ? "" : "s"}` : `${half(m.r.points / 2)} each`}</small>`;
+    const fs = finalShare(m.id);
+    if (fs) res = `<b>${fmtPts(fs.a)}–${fmtPts(fs.b)}</b><small>Stopped${st.status === "live" ? ` · ${esc(st.text)} thru ${st.played}` : ""}</small>`;
+    else if (st.status === "final") res = `<span class="chip" style="background:${st.leader ? `var(--t${st.leader.toLowerCase()})` : "var(--muted)"}">${esc(st.text)}</span><small>${st.leader ? `${esc(teamName(st.leader))} · ${half(m.r.points)} pt${m.r.points === 1 ? "" : "s"}` : `${half(m.r.points / 2)} each`}</small>`;
     else if (st.status === "live") res = `<b>${esc(st.text)}</b><small>Thru ${st.played}</small>`;
     else res = `<b>${teeTime(m.r, m.slot) || "–"}</b><small>${teeTime(m.r, m.slot) ? "Tee time" : "Not started"}</small>`;
     const win = side => st.status === "final" && st.leader === side.toUpperCase() ? ` style="color:var(--t${side}-text)" class="pp ${side} win"` : ` class="pp ${side}"`;
@@ -969,10 +991,10 @@ function renderRoundCard(el, n){
       <img class="crest" src="logo.png" alt="Blacklock XI crest" width="64" height="64">
       <span class="ev">${esc(ev.name)} · ${esc(ev.venue)} ${esc(ev.year)}</span>
       <span class="rtitle" id="rc-title">Round ${n} · ${FORMATS[r.format].label}</span>
-      <div class="totals"><span class="tn a">${esc(A)}</span><span class="big2">${half(rt.A)} – ${half(rt.B)}</span><span class="tn b">${esc(B)}</span></div>
+      <div class="totals"><span class="tn a">${esc(A)}</span><span class="big2${ms.some(m => finalShare(m.id)) ? " dec" : ""}">${fmtPts(rt.A)} – ${fmtPts(rt.B)}</span><span class="tn b">${esc(B)}</span></div>
       <span class="sub2">${esc(r.day)} ${esc(r.session)} · ${esc(roundCourse(r).name)} course · ${esc(state)}</span></div>
     <div class="rounds">${rows}</div>
-    <div class="foot">Overall after round ${n}: ${esc(A)} ${half(oa)} – ${half(ob)} ${esc(B)}</div>
+    <div class="foot">Overall after round ${n}: ${esc(A)} ${fmtPts(oa)} – ${fmtPts(ob)} ${esc(B)}</div>
     <div class="share" data-noshot>${shareFile ? `<button class="btn pri" data-act="sharego">Share image</button>` : `<button class="btn" data-act="sharemake">Share as image</button>`}</div>
   </div></div>`;
 }
@@ -2112,6 +2134,12 @@ function renderSetup(){
       <label class="f">Minutes between matches<input type="number" min="0" step="1" id="r-gap-${i}" value="${esc(r.gap ?? 10)}" ${disabled}></label></div>`).join("")}
     <div><button class="btn pri" data-act="saveevent">Save event</button></div></section>
 
+    <section class="form"><h3>Final result (rain rule)</h3>
+      ${ev.final ? `<p class="hint"><b>A final result is declared</b> (${esc(new Date(ev.final.at).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" }))}). Unfinished matches are fixed at their Blacklock-Lewis shares and the Scoreboard shows the final score. Undo it to go back to live scoring.</p>
+        <div><button class="btn danger" data-act="finalundo" ${disabled}>Undo final result</button></div>`
+      : `<p class="hint">If play is abandoned, this fixes every unfinished match at its Blacklock-Lewis share as it stands now (see the Rain tab), matches not started are halved, and the Scoreboard shows it as the final result.</p>
+        <div><button class="btn pri" data-act="finaldeclare" ${disabled}>Declare final result now</button></div>`}</section>
+
     <section class="form"><h3>Pairings</h3><p class="hint">Pick two players per side for each match. Shots shown update as you pick.</p>
       ${pairings}<div><button class="btn pri" data-act="savepairs">Save pairings</button></div></section>
 
@@ -2187,6 +2215,24 @@ async function saveEvent(){
   e.teams.A = { name: val("e-ta").trim() || "Team 1", color: val("e-ca") }; e.teams.B = { name: val("e-tb").trim() || "Team 2", color: val("e-cb") };
   e.rounds = e.rounds.map((r, i) => ({ day: val(`r-day-${i}`).trim(), session: val(`r-ses-${i}`).trim(), format: val(`r-fmt-${i}`), course: val(`r-crs-${i}`), tee: val(`r-tee-${i}`), points: parseFloat(val(`r-pts-${i}`)) || 1, time: val(`r-time-${i}`).trim(), gap: Math.max(0, parseInt(val(`r-gap-${i}`)) || 0) }));
   await writeEvent(e, "Event saved");
+}
+// Freeze every match that isn't finished at its Blacklock-Lewis share, as it stands now.
+let finalArmed = false;
+async function declareFinal(btn){
+  if (blocked()) return;
+  if (!finalArmed) { finalArmed = true; btn.textContent = "Tap again to declare the final result"; setTimeout(() => { if (finalArmed) { finalArmed = false; btn.textContent = "Declare final result now"; } }, 4000); return; }
+  finalArmed = false;
+  const mm = {};
+  for (let n = 1; n <= 4; n++) for (const mid of matchIds(n)) {
+    const m = getMatch(mid), st = matchState(m); if (st.status === "final") continue;
+    const x = blMatch(m, st); mm[mid] = { a: Math.round(x.a * 1000) / 1000, b: Math.round(x.b * 1000) / 1000, note: x.note };
+  }
+  const e = clone(ev); e.final = { method: "Blacklock-Lewis", at: Date.now(), m: mm };
+  await writeEvent(e, "Final result declared");
+}
+async function undoFinal(){
+  if (blocked() || !confirm("Undo the final result and go back to live scoring?")) return;
+  try { await fs.doc("event/main").update({ final: firebase.firestore.FieldValue.delete() }); toast("Final result undone"); } catch (e) { onWriteError(e); }
 }
 async function saveCourse(){
   if (blocked()) return;
@@ -2447,6 +2493,8 @@ document.addEventListener("click", e => {
     case "update": location.replace(location.pathname + "?u=" + Date.now()); break;
     case "unit": ui.unit = el.dataset.u; saveUi(); render(true); break;
     case "saveevent": saveEvent(); break;
+    case "finaldeclare": declareFinal(el); break;
+    case "finalundo": undoFinal(); break;
     case "savehcps": saveHcps(); break;
     case "refreshhcp": if (!blocked()) fs.doc("matches/" + ui.match).update({ hcp: null }).then(() => toast("Match now uses the new handicaps"), onWriteError); break;
     case "savecourse": saveCourse(); break;
