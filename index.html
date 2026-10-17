@@ -353,6 +353,17 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 .scard .rm .res .chip{font-family:var(--display);font-size:1.15rem;padding:1px 8px;font-weight:700}
 .scard .rm .res b{font-family:var(--display);font-size:1.15rem}
 .scard .rm .res small{font-size:.66rem;color:var(--muted);white-space:nowrap}
+.bltab td,.bltab th{min-width:44px}
+.bllist{display:grid}
+.blrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.blrow.head{border-top:0;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding-top:0}
+.blrow.tot{border-top:2px solid var(--line)}
+.blrow .who{min-width:0;font-size:.88rem;line-height:1.3}
+.blrow .who small{color:var(--muted);font-size:.74rem}
+.blrow .who > span{display:block;overflow-wrap:anywhere}
+.blrow .pts{display:grid;grid-template-columns:3.6rem .8rem 3.6rem;text-align:center;align-items:center;font-variant-numeric:tabular-nums}
+.blrow .pts b{font-family:var(--display);font-size:1.25rem}
+.blrow.head .pts span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scard .share{display:flex;justify-content:center;padding:0 14px 14px}
 
 @media (max-width:520px){
@@ -387,7 +398,7 @@ details.tee summary span{color:var(--muted);font-weight:500;font-size:.85rem}
 <script>
 (() => {
 // Changed on every release so open copies can tell a newer version has been published.
-const BUILD = "2026-10-16.9";
+const BUILD = "2026-10-17.1";
 const CFG = window.BLACKLOCK_CONFIG || { firebase: {}, setupPin: "" };
 const FORMATS = {
   fourball:   { label: "Fourball",   note: "Each player plays their own ball. Best net score on each hole counts for the pair." },
@@ -717,7 +728,7 @@ function renderHeader(){
       <i style="right:0;width:${pct(t.B.won)};background:var(--tb)"></i>
       <i class="mid"></i>
     </div>
-    <nav class="tabs">${tab("board","Scoreboard")}${tab("live","Live")}${tab("course","Course")}${tab("shots","Shots")}${tab("stats","Stats")}${tab("players","Players")}${tab("photos","Media")}${tab("setup","Setup")}</nav>`;
+    <nav class="tabs">${tab("board","Scoreboard")}${tab("live","Live")}${tab("rain","Rain")}${tab("course","Course")}${tab("shots","Shots")}${tab("stats","Stats")}${tab("players","Players")}${tab("photos","Media")}${tab("setup","Setup")}</nav>`;
 }
 
 // ---------- scoreboard ----------
@@ -1939,6 +1950,91 @@ function pinRender(){
   el.innerHTML = `<div class="pinpop" data-act="pinclose"><div class="pincard" role="dialog" aria-modal="true">${body}</div></div>`;
 }
 
+// ---------- Blacklock-Lewis (rain rule) ----------
+// Share of a match awarded to the side ahead when play is abandoned, by holes played (1-17) and lead (1-6 up).
+// All square is 0.5 each; the side behind gets 1 minus the figure; the share is multiplied by the match's points.
+// Leads of 7 up or more are worth 0.997+. Matches already decided keep their result; unstarted matches are halved.
+const BL = {
+  1: [0.621], 2: [0.624, 0.737], 3: [0.628, 0.744, 0.837], 4: [0.632, 0.751, 0.845, 0.913],
+  5: [0.637, 0.758, 0.854, 0.921, 0.962], 6: [0.642, 0.767, 0.864, 0.929, 0.968, 0.987],
+  7: [0.648, 0.776, 0.874, 0.937, 0.973, 0.990], 8: [0.654, 0.787, 0.884, 0.946, 0.979, 0.993],
+  9: [0.662, 0.798, 0.896, 0.955, 0.984, 0.995], 10: [0.670, 0.812, 0.909, 0.964, 0.989, 0.997],
+  11: [0.680, 0.827, 0.923, 0.973, 0.993, 0.999], 12: [0.692, 0.844, 0.938, 0.982, 0.996, 1.000],
+  13: [0.707, 0.865, 0.954, 0.989, 0.999], 14: [0.727, 0.889, 0.970, 0.996], 15: [0.753, 0.919, 0.986],
+  16: [0.790, 0.955], 17: [0.850]
+};
+// Leader's share for `lead` up after `played` holes; null if that position can't happen.
+function blShare(played, lead){
+  if (lead === 0) return 0.5;
+  const left = 18 - played;
+  if (lead > played) return null;
+  if (lead > left) return 1;            // already won
+  if (lead >= 7) return Math.max(0.997, BL[played][5] || 0);
+  const v = BL[played] && BL[played][lead - 1];
+  return v == null ? null : v;
+}
+function f3(n){ return String(Math.round(n * 1000) / 1000); }
+// What a match is worth to each side if play stopped now.
+function blMatch(m, st){
+  const p = m.r.points;
+  if (!m.ready || st.status === "tbc") return { a: p / 2, b: p / 2, note: "No pairing · halved" };
+  if (st.status === "final") return { a: st.leader === "A" ? p : st.leader ? 0 : p / 2, b: st.leader === "B" ? p : st.leader ? 0 : p / 2, note: `Finished ${st.text}` };
+  if (st.status === "notstarted") return { a: p / 2, b: p / 2, note: "Not started · halved" };
+  const lead = Math.abs(st.diff), share = blShare(st.played, lead);
+  if (!lead) return { a: p / 2, b: p / 2, note: `AS thru ${st.played}`, share: 0.5 };
+  const lp = share * p, tp = p - lp;
+  return st.diff > 0 ? { a: lp, b: tp, note: `${lead} UP thru ${st.played}`, share } : { a: tp, b: lp, note: `${lead} UP thru ${st.played}`, share };
+}
+function rainRound(){
+  if (ui.rain && ui.rain.round) return ui.rain.round;
+  // default: a round with matches in play, else the fourball round
+  for (let n = 1; n <= 4; n++) if (matchIds(n).some(mid => matchState(getMatch(mid)).status === "live")) return n;
+  const fb = ev.rounds.findIndex(r => r.format === "fourball"); return fb >= 0 ? fb + 1 : 4;
+}
+function renderRain(){
+  ui.rain = Object.assign({ played: 10, lead: 2, pts: 2 }, ui.rain || {});
+  const c = ui.rain, n = rainRound(), r = ev.rounds[n - 1], A = teamName("A"), B = teamName("B");
+  // Calculator
+  const sh = blShare(c.played, c.lead), left = 18 - c.played;
+  const calcOut = sh == null ? `<p class="hint">You can't be ${c.lead} up after ${c.played} hole${c.played === 1 ? "" : "s"}.</p>`
+    : c.lead === 0 ? `<div class="pinfacts"><div><b>0.5</b>share each</div><div><b>${f3(c.pts / 2)}</b>points each</div><div><b>${left}</b>holes left</div></div>`
+    : `<div class="pinfacts"><div><b>${sh.toFixed(3)}</b>side ahead<small>${f3(sh * c.pts)} pts</small></div><div><b>${(1 - sh).toFixed(3)}</b>side behind<small>${f3((1 - sh) * c.pts)} pts</small></div><div><b>${left}</b>holes left<small>${c.lead > left ? "already won" : c.lead === left ? "dormie" : ""}</small></div></div>`;
+  const sel = (id, opts, v) => `<select id="${id}">${opts.map(([val, lab]) => `<option value="${val}" ${+val === +v ? "selected" : ""}>${lab}</option>`).join("")}</select>`;
+  // Simulator
+  let ta = 0, tb = 0;
+  const rows = matchIds(n).map(mid => {
+    const m = getMatch(mid), st = matchState(m), x = blMatch(m, st); ta += x.a; tb += x.b;
+    const names = side => m.ready ? m[side].map(sname).join(" &amp; ") : "TBC";
+    return `<div class="blrow"><div class="who"><b>M${m.slot}</b> <small>${esc(x.note)}</small><span>${names("a")} <span class="hint">v</span> ${names("b")}</span></div>
+      <div class="pts"><b style="color:var(--ta-text)">${f3(x.a)}</b><span class="hint">–</span><b style="color:var(--tb-text)">${f3(x.b)}</b></div></div>`;
+  }).join("");
+  const t = totals(); let oa = ta, ob = tb;
+  t.rounds.forEach((rt, i) => { if (i !== n - 1) { oa += rt.A; ob += rt.B; } });
+  const toWin = t.toWin, verdict = oa >= toWin ? `${esc(A)} would win the ${esc(ev.name)}` : ob >= toWin ? `${esc(B)} would win the ${esc(ev.name)}` : `${half(toWin)} needed to win`;
+  const head = `<tr><th>Played</th><th>Left</th>${[1,2,3,4,5,6].map(u => `<th>${u} up</th>`).join("")}</tr>`;
+  const body = Array.from({ length: 17 }, (_, i) => i + 1).map(p => `<tr><td>${p}</td><td>${18 - p}</td>${[1,2,3,4,5,6].map(u => {
+    const v = BL[p][u - 1]; if (v == null) return "<td></td>";
+    const dormie = u === 18 - p, cur = p === c.played && u === c.lead;
+    return `<td style="${dormie ? "background:var(--surface2);font-weight:700;" : ""}${cur ? "outline:2px solid var(--accent);outline-offset:-2px;" : ""}">${v.toFixed(3)}</td>`; }).join("")}</tr>`).join("");
+  $app.innerHTML = `<h2 class="sec">Blacklock-Lewis</h2>
+    <p class="lead">If play is abandoned, each unfinished match is shared out by how far ahead a side is and how many holes are left. All square is halved; matches already finished keep their result; matches not started are halved.</p>
+    <div class="form"><h3>If play stopped now</h3>
+      <label class="f">Round${sel("rn-round", ev.rounds.map((x, i) => [i + 1, `R${i + 1} · ${FORMATS[x.format].label} · ${x.points} pt${x.points > 1 ? "s" : ""} a match`]), n)}</label>
+      <div class="bllist"><div class="blrow head"><span>Match</span><span class="pts"><span style="color:var(--ta-text)">${esc(A)}</span><span></span><span style="color:var(--tb-text)">${esc(B)}</span></span></div>
+        ${rows}<div class="blrow tot"><div class="who"><b>Round ${n}</b></div><div class="pts"><b style="color:var(--ta-text)">${f3(ta)}</b><span class="hint">–</span><b style="color:var(--tb-text)">${f3(tb)}</b></div></div></div>
+      <div class="pinfacts"><div><b style="color:var(--ta-text)">${f3(oa)}</b>${esc(A)} overall</div><div><b style="color:var(--tb-text)">${f3(ob)}</b>${esc(B)} overall</div><div><b>${half(toWin)}</b>to win</div></div>
+      <p class="hint"><b>${verdict}.</b> Overall adds this round's shares to the points already won in the other rounds. It updates live as scores come in.</p></div>
+    <div class="form"><h3>Calculator</h3>
+      <div class="fgrid">
+        <label class="f">Holes played${sel("rn-played", Array.from({ length: 17 }, (_, i) => [i + 1, `${i + 1} played · ${17 - i} left`]), c.played)}</label>
+        <label class="f">Lead${sel("rn-lead", [[0, "All square"], ...[1,2,3,4,5,6,7,8,9].map(u => [u, `${u} up`])], c.lead)}</label>
+        <label class="f">Points for the match${sel("rn-pts", [[1, "1 point"], [2, "2 points (fourball)"]], c.pts)}</label></div>
+      ${calcOut}</div>
+    <div class="form"><h3>The table</h3>
+      <p class="hint">Share of the match awarded to the side that is ahead. The side behind gets 1 minus the figure. Multiply by the points for the match (2 in the fourballs). Bold cells are dormie; blank cells can't happen; 7 up or more is worth 0.997+. Model: evenly matched sides, 40% of holes halved.</p>
+      <div class="scroll"><table class="sc bltab"><thead>${head}</thead><tbody>${body}</tbody></table></div></div>`;
+}
+
 // ---------- setup ----------
 function renderSetup(){
   if (setupLocked()) {
@@ -2295,6 +2391,7 @@ function render(force){
   else if (ui.tab === "shots") renderShots();
   else if (ui.tab === "stats") renderStats();
   else if (ui.tab === "live") renderFeed();
+  else if (ui.tab === "rain") renderRain();
   else if (ui.tab === "photos") renderPhotos();
   else if (ui.tab === "course") renderCourse();
   else renderSetup();
@@ -2390,6 +2487,7 @@ document.addEventListener("change", e => {
   if (t.id === "restore-file") { readRestoreFile(t.files[0]); return; }
   if (t.id === "md-file") { const f = t.files[0]; t.value = ""; if (f) uploadMedia(f); return; }
   if (t.id === "md-match") { ui.mdMatch = t.value; return; }
+  if (/^rn-/.test(t.id)) { ui.rain = Object.assign({}, ui.rain, { [t.id.slice(3)]: +t.value }); render(true); return; }
   if (t.id === "ge-course") {
     if (ge.dirty && !confirm(`Hole ${ge.h} has unsaved changes. Discard them?`)) { t.value = ge.k; return; }
     ge.k = t.value; geHole(1); return;
@@ -2423,7 +2521,7 @@ document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id
 // ---------- boot ----------
 setTheme(themeNow());
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(e => console.warn("Offline support unavailable:", e));
-if (!["board","live","photos","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
+if (!["board","live","rain","photos","players","stats","shots","course","setup"].includes(ui.tab)) ui.tab = "board";
 if (ui.match && !/^r[1-4]m[1-4]$/.test(ui.match)) ui.match = null;
 if (ui.match) ui.hole = 1;
 render(true);
